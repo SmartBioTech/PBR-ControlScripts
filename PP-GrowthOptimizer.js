@@ -4,7 +4,7 @@
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @version 1.9
- * @modified 17.12.2016 (JaCe)
+ * @modified 11.1.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -31,8 +31,8 @@ importPackage(Packages.psi.bioreactor.core.regression);
 
 // Static parameters set by user
 // -turbidostat
-var maxOD = 0.66; // - upper bound of OD regulator
-var minOD = 0.60; // - lower bound of OD regulator
+var maxOD = 0.44; // - upper bound of OD regulator
+var minOD = 0.40; // - lower bound of OD regulator
 var intervalOD = 60; // [s] - how often is measured OD
 // -peristaltic pump
 var pumpSpeed = 100; // [%] - speed of the peristaltic pump
@@ -40,13 +40,13 @@ var slowDownRange = 25; // [%] - lower range where the pump slows down
 var slowDownFact = 50; // [%] - slow down factor
 // -optimizer stability
 var analyzedSteps = 6; // - number of steps to be analyzed for stability check
-var optimalStability = 2.5; // [%] - max percents of 95% confidence interval
+var optimalStability = 3.0; // [%] - max percents of 95% confidence interval
 var optimalTrend = 1.0; // [%] - max trend of change in time
 var stabilizationTimeMin = 12; // [h] minimal time required for stability check
 var growthCurveStablePart = 2/3;
 // -optimizer parameters
-var controlledParameter = "temperature"; // supported parameters to control are none, temperature, lights, GMS, stirrer
-var parameterSteps = [32]; // values range of the parameter controlled
+var controlledParameter = "lights"; // supported parameters to control are none, temperature, lights, GMS, stirrer
+var parameterSteps = [[1100,25],[440,25],[55,25]]; // values range of the parameter controlled
 /*
 temperature = [28, 32, 34, 30, 26, 22 ]; // [oC]
 lights = [[ 55, 25],[110, 25],[220, 25],[440, 25],[880,25]]; // [uE]
@@ -55,7 +55,7 @@ stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 a
 */
 
 function round(number, decimals) {
-    return +(Math.round(number + "e+" + decimals) + "e-" + decimals);
+   return +(Math.round(number + "e+" + decimals) + "e-" + decimals);
 }
 
 // Control accessory functions
@@ -101,121 +101,121 @@ function controlParameter(parameter, values) {
 
 // Control the pump
 function controlPump() {
-    var odSens = theGroup.getAccessory("od-sensors.od-680");
-    if (odSens === null || odSens.hasError()) {
-        return null; // pump not influenced
-    }
-    var odVal = odSens.getValue();
+   var odSens = theGroup.getAccessory("od-sensors.od-720");
+   if (odSens === null || odSens.hasError()) {
+      return null; // pump not influenced
+   }
+   var odVal = odSens.getValue();
 
-    var lastOD = Number(theAccessory.context().get("lastOD", 0));
-    var odNoise = Number(theAccessory.context().get("odNoise", 1));
+   var lastOD = Number(theAccessory.context().get("lastOD", 0));
+   var odNoise = Number(theAccessory.context().get("odNoise", 1));
 
-    // Check for OD noise/overshots and primitive OD averaging
-    if (!Double.isNaN(odVal) && (round(odVal,3) != round(lastOD,3))) {
-         if (odNoise) {
-            theAccessory.context().put("odNoise", 0);
-            theAccessory.context().put("lastOD", odVal);
-            return null;
-         }
-         if (pumpSet || (Math.abs(1-odVal/lastOD) < 0.04)) {
-            odVal = (odVal + lastOD) / 2;
-            theAccessory.context().put("lastOD", odVal);
-         }
-         else {
-            theAccessory.context().put("odNoise", 1);
-            theAccessory.context().put("lastOD", odVal);
-            return null;
-         }
-    }
-    else return null;
+   // Check for OD noise/overshots and primitive OD averaging
+   if (!Double.isNaN(odVal) && (round(odVal,3) != round(lastOD,3))) {
+      if (odNoise) {
+         theAccessory.context().put("odNoise", 0);
+         theAccessory.context().put("lastOD", odVal);
+         return null;
+      }
+      if (pumpSet || (Math.abs(1-odVal/lastOD) < 0.04)) {
+         odVal = (odVal + lastOD) / 2;
+         theAccessory.context().put("lastOD", odVal);
+      }
+      else {
+         theAccessory.context().put("odNoise", 1);
+         theAccessory.context().put("lastOD", odVal);
+         return null;
+      }
+   }
+   else return null;
 
-    // Start step growth rate evaluation
-    if (odVal > maxOD && !pumpSet) {
-        var stepCounter = Number(theAccessory.context().get("stepCounter", 0));
-        var expDuration = theAccessory.context().get("expDuration", 0);
-        var stepDuration = theAccessory.context().get("stepDuration", 0);
-        var stepDoublingTime = theAccessory.context().get("stepDoublingTime", 0);
-        var stabilizedTime = theAccessory.context().get("stabilizedTime", 0);
-        if (expDuration == 0) {
-            stepCounter=0;
-            expDuration=[]; stepDuration=[]; stepDoublingTime=[];
-            theAccessory.context().put("expDuration", expDuration);
-            theAccessory.context().put("stepDuration", stepDuration);
-            theAccessory.context().put("stepDoublingTime", stepDoublingTime);
-            theAccessory.context().put("stabilizedTime", Number(theExperiment.getDurationSec()) + stabilizationTimeMin * 3600);
-            odSens.getDataHistory().setCapacity(600);
-        }
-        expDuration[stepCounter] = Number(theExperiment.getDurationSec());
-        stepDuration[stepCounter] = expDuration[stepCounter]-Number(theAccessory.context().get("lastPumpStop", expDuration[stepCounter]));
-        if (stepDuration[stepCounter] > 0) {
-            var DHCapacity = (Math.floor(stepDuration[stepCounter]/intervalOD)-3)>0 ? (Math.floor(stepDuration[stepCounter]/intervalOD)-3) : 60;
-            var regCoefExp = odSens.getDataHistory().regression(ETrendFunction.EXP,Math.ceil(DHCapacity*growthCurveStablePart));
-            stepDoublingTime[stepCounter] = Number(1/(regCoefExp[1]*3600*10))*Math.LN2;
-            theExperiment.addEvent("External pump started, doubling time of the step was " + round(stepDoublingTime[stepCounter],2) + " h and step no. is " + (++stepCounter));
-            theAccessory.context().put("stepCounter", stepCounter);
-            if (stepCounter >= analyzedSteps) {
-                var stepDoublingTimeAvg = 0; var stepDoublingTimeSD = 0; var stepDoublingTimeIC95 = 0; var stepTrend = 0; var sumXY = 0; var sumX = 0; var sumY = 0; var sumX2 = 0; var sumY2 = 0;
+   // Start step growth rate evaluation
+   if (odVal > maxOD && !pumpSet) {
+      var stepCounter = Number(theAccessory.context().get("stepCounter", 0));
+      var expDuration = theAccessory.context().get("expDuration", 0);
+      var stepDuration = theAccessory.context().get("stepDuration", 0);
+      var stepDoublingTime = theAccessory.context().get("stepDoublingTime", 0);
+      var stabilizedTime = theAccessory.context().get("stabilizedTime", 0);
+      if (expDuration == 0) {
+         stepCounter=0;
+         expDuration=[]; stepDuration=[]; stepDoublingTime=[];
+         theAccessory.context().put("expDuration", expDuration);
+         theAccessory.context().put("stepDuration", stepDuration);
+         theAccessory.context().put("stepDoublingTime", stepDoublingTime);
+         theAccessory.context().put("stabilizedTime", Number(theExperiment.getDurationSec()) + stabilizationTimeMin * 3600);
+         odSens.getDataHistory().setCapacity(600);
+      }
+      expDuration[stepCounter] = Number(theExperiment.getDurationSec());
+      stepDuration[stepCounter] = expDuration[stepCounter]-Number(theAccessory.context().get("lastPumpStop", expDuration[stepCounter]));
+      if (stepDuration[stepCounter] > 0) {
+         var DHCapacity = (Math.floor(stepDuration[stepCounter]/intervalOD)-3)>0 ? (Math.floor(stepDuration[stepCounter]/intervalOD)-3) : 60;
+         var regCoefExp = odSens.getDataHistory().regression(ETrendFunction.EXP,Math.ceil(DHCapacity*growthCurveStablePart));
+         stepDoublingTime[stepCounter] = Number(1/(regCoefExp[1]*3600*10))*Math.LN2;
+         theExperiment.addEvent("External pump started, doubling time of the step was " + round(stepDoublingTime[stepCounter],2) + " h and step no. is " + (++stepCounter));
+         theAccessory.context().put("stepCounter", stepCounter);
+         if (stepCounter >= analyzedSteps) {
+            var stepDoublingTimeAvg = 0; var stepDoublingTimeSD = 0; var stepDoublingTimeIC95 = 0; var stepTrend = 0; var sumXY = 0; var sumX = 0; var sumY = 0; var sumX2 = 0; var sumY2 = 0;
 
-                // Average of steps doubling time
-                for (var i = (stepCounter - 1); i >= (stepCounter - analyzedSteps); i--) {
-                    stepDoublingTimeAvg += Number(stepDoublingTime[i]);
-                }
-                stepDoublingTimeAvg /= analyzedSteps;
-
-                // IC95 of steps doubling time
-                for (i = (stepCounter - 1); i >= (stepCounter - analyzedSteps); i--) {
-                    stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg,2);
-                }
-                stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD/analyzedSteps);
-                stepDoublingTimeIC95 = stepDoublingTimeSD/Math.sqrt(analyzedSteps) * 1.96;
-
-                // Trend of steps doubling time
-                for (i = (stepCounter - 1); i >= (stepCounter - analyzedSteps); i--) {
-                    sumX += Number(expDuration[i]);
-                    sumX2 += Math.pow(expDuration[i],2);
-                    sumY += Number(stepDoublingTime[i]);
-                    sumY2 += Math.pow(stepDoublingTime[i],2);
-                    sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i]);
-                }
-                stepTrend = (analyzedSteps * sumXY - sumX * sumY) / (analyzedSteps * sumX2 - Math.pow(sumX,2)) * 3600;
-                theExperiment.addEvent("Steps doubling time Avg: " + round(stepDoublingTimeAvg,2) + " h, IC95 " + round(stepDoublingTimeIC95,2) + " (" + round(stepDoublingTimeIC95/stepDoublingTimeAvg*100,1) + "%) with " + round(stepTrend,2) + " h/h trend (" + round(stepTrend/stepDoublingTimeAvg*100,1) + "%)");
-
-                // Growth stability test and parameters control
-                if (stepDoublingTimeIC95 / stepDoublingTimeAvg <= optimalStability / 100 && Math.abs(stepTrend/stepDoublingTimeAvg) <= optimalTrend / 100 && stabilizedTime <= Number(theExperiment.getDurationSec())) {
-                    var changeCounter = Number(theAccessory.context().get("changeCounter", 0));
-                    theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().get("controlledParameterText", 0) + ") is " + round(stepDoublingTimeAvg,2) + String.fromCharCode(2213) + round(stepDoublingTimeIC95,2) + " h (IC95)");
-                    if (parameterSteps.length > 1) {
-                     if (changeCounter < parameterSteps.length) {
-                        controlParameter(controlledParameter, parameterSteps[changeCounter]);
-                        theAccessory.context().put("changeCounter", ++changeCounter);
-                     }
-                     else if (changeCounter < (2 * parameterSteps.length - 1)) {
-                        controlParameter(controlledParameter, parameterSteps[2*lightRedSteps.length - 1 - changeCounter]);
-                        theAccessory.context().put("changeCounter", ++changeCounter);
-                     }
-                     else {
-                        theAccessory.context().put("changeCounter", 0);
-                     }
-                     theAccessory.context().remove("stepCounter");
-                     theAccessory.context().remove("expDuration");
-                     theAccessory.context().remove("stepDoublingTime");
-                     theAccessory.context().remove("stabilizedTime");
-                    }
-                }
+            // Average of steps doubling time
+            for (var i = (stepCounter - 1); i >= (stepCounter - analyzedSteps); i--) {
+               stepDoublingTimeAvg += Number(stepDoublingTime[i]);
             }
-        }
-        else theExperiment.addEvent("External pump started");
-        return theAccessory.getMax(); // fast
-    }
-    else if (odVal <= minOD && pumpSet) {
-        theAccessory.context().put("lastPumpStop", theExperiment.getDurationSec());
-        theExperiment.addEvent("External pump stopped");
-        return ProtoConfig.OFF; // pump off
-    }
-    else if (odVal <= (minOD+(maxOD-minOD)*slowDownRange/100) && pumpSet) {
-        return theAccessory.getMax()*slowDownFact/100; // slow down the pump
-    }
-    else return null; //pump not influenced
+            stepDoublingTimeAvg /= analyzedSteps;
+
+            // IC95 of steps doubling time
+            for (i = (stepCounter - 1); i >= (stepCounter - analyzedSteps); i--) {
+               stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg,2);
+            }
+            stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD/analyzedSteps);
+            stepDoublingTimeIC95 = stepDoublingTimeSD/Math.sqrt(analyzedSteps) * 1.96;
+
+            // Trend of steps doubling time
+            for (i = (stepCounter - 1); i >= (stepCounter - analyzedSteps); i--) {
+               sumX += Number(expDuration[i]);
+               sumX2 += Math.pow(expDuration[i],2);
+               sumY += Number(stepDoublingTime[i]);
+               sumY2 += Math.pow(stepDoublingTime[i],2);
+               sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i]);
+            }
+            stepTrend = (analyzedSteps * sumXY - sumX * sumY) / (analyzedSteps * sumX2 - Math.pow(sumX,2)) * 3600;
+            theExperiment.addEvent("Steps doubling time Avg: " + round(stepDoublingTimeAvg,2) + " h, IC95 " + round(stepDoublingTimeIC95,2) + " (" + round(stepDoublingTimeIC95/stepDoublingTimeAvg*100,1) + "%) with " + round(stepTrend,2) + " h/h trend (" + round(stepTrend/stepDoublingTimeAvg*100,1) + "%)");
+
+            // Growth stability test and parameters control
+            if (stepDoublingTimeIC95 / stepDoublingTimeAvg <= optimalStability / 100 && Math.abs(stepTrend/stepDoublingTimeAvg) <= optimalTrend / 100 && stabilizedTime <= Number(theExperiment.getDurationSec())) {
+               var changeCounter = Number(theAccessory.context().get("changeCounter", 0));
+               theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().get("controlledParameterText", 0) + ") is " + round(stepDoublingTimeAvg,2) + String.fromCharCode(2213) + round(stepDoublingTimeIC95,2) + " h (IC95)");
+               if (parameterSteps.length > 1) {
+                  if (changeCounter < parameterSteps.length) {
+                     controlParameter(controlledParameter, parameterSteps[changeCounter]);
+                     theAccessory.context().put("changeCounter", ++changeCounter);
+                  }
+                  else if (changeCounter < (2 * parameterSteps.length - 1)) {
+                     controlParameter(controlledParameter, parameterSteps[2*lightRedSteps.length - 1 - changeCounter]);
+                     theAccessory.context().put("changeCounter", ++changeCounter);
+                  }
+                  else {
+                     theAccessory.context().put("changeCounter", 0);
+                  }
+                  theAccessory.context().remove("stepCounter");
+                  theAccessory.context().remove("expDuration");
+                  theAccessory.context().remove("stepDoublingTime");
+                  theAccessory.context().remove("stabilizedTime");
+               }
+            }
+         }
+      }
+      else theExperiment.addEvent("External pump started");
+      return theAccessory.getMax(); // fast
+   }
+   else if (odVal <= minOD && pumpSet) {
+      theAccessory.context().put("lastPumpStop", theExperiment.getDurationSec());
+      theExperiment.addEvent("External pump stopped");
+      return ProtoConfig.OFF; // pump off
+   }
+   else if (odVal <= (minOD+(maxOD-minOD)*slowDownRange/100) && pumpSet) {
+      return theAccessory.getMax()*slowDownFact/100; // slow down the pump
+   }
+   else return null; //pump not influenced
 }
 
 // Reset the context
@@ -231,18 +231,17 @@ theAccessory.context().remove("lastOD");
 
 // Set the result
 
-
 var pumpSet = !Double.isNaN(theAccessory.getValue());
 // Check whether O2 evolution and respiration measurement mode is active
 var modeO2EvolResp = Number(theGroup.getAccessory("probes.o2").context().get("modeO2EvolResp", 0));
 if (modeO2EvolResp) {
-    if (pumpSet) {
-        result = theAccessory.getMin();
-        theAccessory.context().put("pumpSuspended", 1);
-    }
+   if (pumpSet) {
+      result = theAccessory.getMin();
+      theAccessory.context().put("pumpSuspended", 1);
+   }
 }
 else if (Number(theAccessory.context().get("pumpSuspended", 0))) {
-    theAccessory.context().put("pumpSuspended", 0);
-    result = theAccessory.getMax();
+   theAccessory.context().put("pumpSuspended", 0);
+   result = theAccessory.getMax();
 }
 else result = controlPump();
