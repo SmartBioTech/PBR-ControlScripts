@@ -8,7 +8,7 @@
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
- *        The pump hs to be set to ID 5 and OD protocol set to 1 min readout period
+ *        The pump has to be set to ID 5
  *
  * @param {number} minOD Min OD/lower bound for OD regulator/turbidostat
  * @param {number} maxOD Max OD/upper bound for OD regulator/turbidostat
@@ -31,26 +31,27 @@ importPackage(Packages.psi.bioreactor.core.regression);
 
 // Static parameters set by user
 // -turbidostat
-var maxOD = 0.44; // - upper bound of OD regulator
-var minOD = 0.40; // - lower bound of OD regulator
-var intervalOD = 60; // [s] - how often is measured OD
+var maxOD = 0.44; // upper bound of OD regulator
+var minOD = 0.40; // lower bound of OD regulator
+var odType = 720; // [nm] OD sensor user for turbidostat control
+var intervalOD = 60; // [s] how often is measured OD
 // -peristaltic pump
-var pumpSpeed = 100; // [%] - speed of the peristaltic pump
-var slowDownRange = 25; // [%] - lower range where the pump slows down
-var slowDownFact = 50; // [%] - slow down factor
+var pumpSpeed = 100; // [%] speed of the peristaltic pump
+var slowDownRange = 25; // [%] lower range where the pump slows down
+var slowDownFact = 50; // [%] slow down factor
 // -optimizer stability
-var analyzedSteps = 6; // - number of steps to be analyzed for stability check
-var optimalStability = 3.0; // [%] - max percents of 95% confidence interval
-var optimalTrend = 1.0; // [%] - max trend of change in time
+var analyzedSteps = 6; // number of steps to be analyzed for stability check
+var optimalStability = 3.0; // [%] max percents of 95% confidence interval
+var optimalTrend = 1.0; // [%] max trend of change in time
 var stabilizationTimeMin = 12; // [h] minimal time required for stability check
-var growthCurveStablePart = 2/3;
+var growthCurveStablePart = 2/3; // fraction of the last part of the groth data used for doubling time determination
 // -optimizer parameters
 var controlledParameter = "lights"; // supported parameters to control are none, temperature, lights, GMS, stirrer
-var parameterSteps = [[1100,25],[440,25],[55,25]]; // values range of the parameter controlled
+var parameterSteps = [[ 1100,25 ],[ 440,25 ],[ 55,25 ]]; // values range of the parameter controlled
 /*
-temperature = [28, 32, 34, 30, 26, 22 ]; // [oC]
-lights = [[ 55, 25],[110, 25],[220, 25],[440, 25],[880,25]]; // [uE]
-GMS = [[ 195.88, 5.873],[195.88, 12.478],[185.30, 18.257],[185.30,25.274]]; // [ml/min]
+temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
+lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
+GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
 stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
 */
 
@@ -101,7 +102,20 @@ function controlParameter(parameter, values) {
 
 // Control the pump
 function controlPump() {
-   var odSens = theGroup.getAccessory("od-sensors.od-720");
+   switch (odType) {
+      case 680:
+         odString = "od-sensors.od-680";
+         break;
+      case 720:
+         odString = "od-sensors.od-720";
+         break;
+      case 735:
+         odString = "od-sensors.od-735";
+         break;
+      default:
+         odString = "od-sensors.od-680";
+   }
+   var odSens = theGroup.getAccessory(odString);
    if (odSens === null || odSens.hasError()) {
       return null; // pump not influenced
    }
