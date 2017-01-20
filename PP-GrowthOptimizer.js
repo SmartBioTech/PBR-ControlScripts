@@ -55,6 +55,17 @@ GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]
 stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
 */
 
+function resetContext() {
+   theAccessory.context().remove("stepCounter");
+   theAccessory.context().remove("expDuration");
+   theAccessory.context().remove("stepDuration");
+   theAccessory.context().remove("stepDoublingTime");
+   theAccessory.context().remove("changeCounter");
+   theAccessory.context().remove("lastPumpStop");
+   theAccessory.context().remove("lastOD");
+   theAccessory.context().remove("stabilizedTime");
+}
+
 function round(number, decimals) {
    return +(Math.round(number + "e+" + decimals) + "e-" + decimals);
 }
@@ -115,12 +126,13 @@ function controlPump() {
       default:
          odSensorString = "od-sensors.od-680";
    }
+   
    var odSensor = theGroup.getAccessory(odSensorString);
    if (odSensor === null || odSensor.hasError()) {
       return null; // pump not influenced
    }
+   
    var odVal = odSensor.getValue();
-
    var lastOD = Number(theAccessory.context().get("lastOD", 0));
    var odNoise = Number(theAccessory.context().get("odNoise", 1));
 
@@ -145,6 +157,7 @@ function controlPump() {
 
    // Start step growth rate evaluation
    if (odVal > maxOD && !pumpSet) {
+      theAccessory.context().put("modeDilution", 1);
       var stepCounter = Number(theAccessory.context().get("stepCounter", 0));
       var expDuration = theAccessory.context().get("expDuration", 0);
       var stepDuration = theAccessory.context().get("stepDuration", 0);
@@ -222,6 +235,7 @@ function controlPump() {
       return theAccessory.getMax(); // fast
    }
    else if (odVal <= minOD && pumpSet) {
+      theAccessory.context().put("modeDilution", 0);
       theAccessory.context().put("lastPumpStop", theExperiment.getDurationSec());
       theExperiment.addEvent("External pump stopped");
       return ProtoConfig.OFF; // pump off
@@ -232,19 +246,7 @@ function controlPump() {
    else return null; //pump not influenced
 }
 
-// Reset the context
-/*
-theAccessory.context().remove("stepCounter");
-theAccessory.context().remove("expDuration");
-theAccessory.context().remove("stepDuration");
-theAccessory.context().remove("stepDoublingTime");
-theAccessory.context().remove("changeCounter");
-theAccessory.context().remove("lastPumpStop");
-theAccessory.context().remove("lastOD");
-*/
-
 // Set the result
-
 var pumpSet = !Double.isNaN(theAccessory.getValue());
 // Check whether O2 evolution and respiration measurement mode is active
 var modeO2EvolResp = Number(theGroup.getAccessory("probes.o2").context().get("modeO2EvolResp", 0));

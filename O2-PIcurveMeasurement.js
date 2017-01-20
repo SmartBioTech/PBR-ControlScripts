@@ -32,6 +32,7 @@ var durationO2resp = 120; // [s]
 var durationO2relax = 120; // [s]
 var rateEvalPart = 2/3; // [s]
 var measurementPeriod = 7200; // [s]
+var measerementPumpSync = 1; // [0/1] defines whether the measurement is synchronized with dilutions 
 var periodO2 = 60; // [s]
 var periodO2fast = 5; // [s]
 var stirrerValue = [50,60]; // [%] defines normal and fast measurement stirrer intensity
@@ -46,7 +47,7 @@ var initialization = Number(theAccessory.context().get("initialization", 0));
 var stirrer = theGroup.getAccessory("pwm.stirrer");
 var bubbles = theGroup.getAccessory("switches.valve-0");
 
-function reset() {
+function resetContext() {
    theAccessory.context().remove("modeO2EvolResp");
    theAccessory.context().remove("changeCounter");
    theAccessory.context().remove("suspended");
@@ -81,7 +82,9 @@ if (!initialization) {
    theAccessory.context().put("measurementTime", measurementTime);
 }
 
-if(expDuration >= measurementTime){
+measerementPumpSync ? pumpSet = theAccessory.context().get("modeDilution", 0) : pumpSet = 1;
+
+if((expDuration >= measurementTime) && pumpSet){
    var changeCounter = Number(theAccessory.context().get("changeCounter", 0));
    var suspended = Number(theAccessory.context().get("suspended", 0));
    var suspendedLights = Number(theAccessory.context().get("suspendedLights", 0));
@@ -95,15 +98,15 @@ if(expDuration >= measurementTime){
 
    if (!suspended) {
       theAccessory.context().put("suspended", 1);
- 	  theAccessory.context().put("modeO2EvolResp", 1);
- 	  resumeTime = expDuration+durationO2+durationO2resp;
- 	  theAccessory.context().put("resumeTime", resumeTime);
- 	  theAccessory.context().put("light0Value", light0.getValue());
- 	  theAccessory.context().put("light1Value", light1.getValue());
+ 	   theAccessory.context().put("modeO2EvolResp", 1);
+ 	   resumeTime = expDuration+durationO2+durationO2resp;
+ 	   theAccessory.context().put("resumeTime", resumeTime);
+ 	   theAccessory.context().put("light0Value", light0.getValue());
+      theAccessory.context().put("light1Value", light1.getValue());
 
- 	  if (!changeCounter) theExperiment.addEvent("PI-curve START");
+ 	   if (!changeCounter) theExperiment.addEvent("PI-curve START");
 
- 	  //bubbles.suspend(resumeTime); 
+ 	   //bubbles.suspend(resumeTime); 
       bubbles.setRunningProtoConfig(ProtoConfig.OFF);
       stirrer.setRunningProtoConfig(new ProtoConfig(stirrerValue[1]));
       controlLights(light0.getValue()*lightSteps[changeCounter],light1.getValue());
