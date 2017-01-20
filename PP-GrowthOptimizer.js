@@ -33,7 +33,7 @@ importPackage(Packages.psi.bioreactor.core.regression);
 // -turbidostat
 var maxOD = 0.44; // upper bound of OD regulator
 var minOD = 0.40; // lower bound of OD regulator
-var odType = 720; // [nm] OD sensor user for turbidostat control
+var typeOD = 720; // [nm] OD sensor user for turbidostat control
 var intervalOD = 60; // [s] how often is measured OD
 // -peristaltic pump
 var pumpSpeed = 100; // [%] speed of the peristaltic pump
@@ -77,16 +77,16 @@ function controlParameter(parameter, values) {
          break;
       case "temperature":
          var thermoreg = theGroup.getAccessory("thermo.thermo-reg");
-         var unit = String.fromCharCode(2103)+"C";
+         var unit = String.fromCharCode(176)+"C";
          thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values[0])));
          break;
       case "GMS":
          var valve0 = theGroup.getAccessory("gas-mixer.valve-0-reg"); // CO2
          var valve1 = theGroup.getAccessory("gas-mixer.valve-1-reg"); // Air
-         var unit = "ml/min";
+         var unit = " ml/min";
          valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])));
          valve0.setRunningProtoConfig(new ProtoConfig(Number(values[1])));
-         theExperiment.addEvent("Gas Mixing set to Air flow " + round(flowAir,2) + "ml/min and CO2 flow " + round(flowCO2, 2) + "ml/min (" + round((flowCO2/(flowCO2+flowAir)+400/1e6)*100, 1) + "%)");
+         theExperiment.addEvent("Gas Mixing set to Air flow " + round(flowAir,2) + " ml/min and CO2 flow " + round(flowCO2, 2) + " ml/min (" + round((flowCO2/(flowCO2+flowAir)+400/1e6)*100, 1) + "%)");
          break;
       case "stirrer":
          var stirrer = theGroup.getAccessory("pwm.stirrer");
@@ -102,24 +102,24 @@ function controlParameter(parameter, values) {
 
 // Control the pump
 function controlPump() {
-   switch (odType) {
+   switch (typeOD) {
       case 680:
-         odString = "od-sensors.od-680";
+         odSensorString = "od-sensors.od-680";
          break;
       case 720:
-         odString = "od-sensors.od-720";
+         odSensorString = "od-sensors.od-720";
          break;
       case 735:
-         odString = "od-sensors.od-735";
+         odSensorString = "od-sensors.od-735";
          break;
       default:
-         odString = "od-sensors.od-680";
+         odSensorString = "od-sensors.od-680";
    }
-   var odSens = theGroup.getAccessory(odString);
-   if (odSens === null || odSens.hasError()) {
+   var odSensor = theGroup.getAccessory(odSensorString);
+   if (odSensor === null || odSensor.hasError()) {
       return null; // pump not influenced
    }
-   var odVal = odSens.getValue();
+   var odVal = odSensor.getValue();
 
    var lastOD = Number(theAccessory.context().get("lastOD", 0));
    var odNoise = Number(theAccessory.context().get("odNoise", 1));
@@ -157,13 +157,13 @@ function controlPump() {
          theAccessory.context().put("stepDuration", stepDuration);
          theAccessory.context().put("stepDoublingTime", stepDoublingTime);
          theAccessory.context().put("stabilizedTime", Number(theExperiment.getDurationSec()) + stabilizationTimeMin * 3600);
-         odSens.getDataHistory().setCapacity(600);
+         odSensor.getDataHistory().setCapacity(600);
       }
       expDuration[stepCounter] = Number(theExperiment.getDurationSec());
       stepDuration[stepCounter] = expDuration[stepCounter]-Number(theAccessory.context().get("lastPumpStop", expDuration[stepCounter]));
       if (stepDuration[stepCounter] > 0) {
          var DHCapacity = (Math.floor(stepDuration[stepCounter]/intervalOD)-3)>0 ? (Math.floor(stepDuration[stepCounter]/intervalOD)-3) : 60;
-         var regCoefExp = odSens.getDataHistory().regression(ETrendFunction.EXP,Math.ceil(DHCapacity*growthCurveStablePart));
+         var regCoefExp = odSensor.getDataHistory().regression(ETrendFunction.EXP,Math.ceil(DHCapacity*growthCurveStablePart));
          stepDoublingTime[stepCounter] = Number(1/(regCoefExp[1]*3600*10))*Math.LN2;
          theExperiment.addEvent("External pump started, doubling time of the step was " + round(stepDoublingTime[stepCounter],2) + " h and step no. is " + (++stepCounter));
          theAccessory.context().put("stepCounter", stepCounter);
@@ -197,7 +197,7 @@ function controlPump() {
             // Growth stability test and parameters control
             if (stepDoublingTimeIC95 / stepDoublingTimeAvg <= optimalStability / 100 && Math.abs(stepTrend/stepDoublingTimeAvg) <= optimalTrend / 100 && stabilizedTime <= Number(theExperiment.getDurationSec())) {
                var changeCounter = Number(theAccessory.context().get("changeCounter", 0));
-               theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().get("controlledParameterText", 0) + ") is " + round(stepDoublingTimeAvg,2) + String.fromCharCode(2213) + round(stepDoublingTimeIC95,2) + " h (IC95)");
+               theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().get("controlledParameterText", 0) + ") is " + round(stepDoublingTimeAvg,2) + String.fromCharCode(177) + round(stepDoublingTimeIC95,2) + " h (IC95)");
                if (parameterSteps.length > 1) {
                   if (changeCounter < parameterSteps.length) {
                      controlParameter(controlledParameter, parameterSteps[changeCounter]);
