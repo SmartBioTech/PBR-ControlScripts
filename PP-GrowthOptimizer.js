@@ -4,14 +4,16 @@
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @version 1.9
- * @modified 11.1.2017 (JaCe)
+ * @modified 22.1.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
- *        The pump has to be set to ID 5
+ *        The pump has to be set to ID 5 to allow compatibility with other scripts
  *
  * @param {number} minOD Min OD/lower bound for OD regulator/turbidostat
  * @param {number} maxOD Max OD/upper bound for OD regulator/turbidostat
+ * @param {number} typeOD OD sensor used for turbidostat control
+ * @param {number} intervalOD Defines how often is OD measured
  * @param {number} pumpSpeed Nominal pump speed used for dilution of the suspension
  * @param {number} slowDownRange Lower range where the pump slows down
  * @param {number} slowDownFact Slow down factor for the pump
@@ -19,6 +21,9 @@
  * @param {number} optimalStability Max allowed percents of 95% Confidence Interval
  * @param {number} optimalTrend Max growth speed trend in time
  * @param {numebr} stabilizationTimeMin Minimal duration of each characterization step
+ * @param {numebr} growthCurveStablePart Fraction of the last part of the groth data used for doubling time determination
+ * @param {numebr} controlledParameter Supported parameters to control are "none", "temperature", "lights", "GMS", "stirrer"
+ * @param {numebr} parameterSteps Values range of the parameter controlled
  *
  * @return Flow of external/additional pump
  *
@@ -33,8 +38,8 @@ importPackage(Packages.psi.bioreactor.core.regression);
 // -turbidostat
 var maxOD = 0.44; // upper bound of OD regulator
 var minOD = 0.40; // lower bound of OD regulator
-var typeOD = 720; // [nm] OD sensor user for turbidostat control
-var intervalOD = 60; // [s] how often is measured OD
+var typeOD = 720; // [nm] OD sensor used for turbidostat control
+var intervalOD = 60; // [s] how often is OD measured
 // -peristaltic pump
 var pumpSpeed = 100; // [%] speed of the peristaltic pump
 var slowDownRange = 25; // [%] lower range where the pump slows down
@@ -64,6 +69,8 @@ function resetContext() {
    theAccessory.context().remove("lastPumpStop");
    theAccessory.context().remove("lastOD");
    theAccessory.context().remove("stabilizedTime");
+   theAccessory.context().remove("controlledParameterText");
+   theAccessory.context().remove("dilution");
 }
 
 function round(number, decimals) {
