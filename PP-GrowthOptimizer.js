@@ -4,7 +4,7 @@
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @version 1.9
- * @modified 11.1.2017 (JaCe)
+ * @modified 16.2.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -31,9 +31,9 @@ importPackage(Packages.psi.bioreactor.core.regression);
 
 // Static parameters set by user
 // -turbidostat
-var maxOD = 0.44; // upper bound of OD regulator
-var minOD = 0.40; // lower bound of OD regulator
-var typeOD = 720; // [nm] OD sensor user for turbidostat control
+var maxOD = 0.52; // upper bound of OD regulator
+var minOD = 0.48; // lower bound of OD regulator
+var typeOD = 680; // [nm] OD sensor user for turbidostat control
 var intervalOD = 60; // [s] how often is measured OD
 // -peristaltic pump
 var pumpSpeed = 100; // [%] speed of the peristaltic pump
@@ -46,7 +46,7 @@ var optimalTrend = 1.0; // [%] max trend of change in time
 var stabilizationTimeMin = 12; // [h] minimal time required for stability check
 var growthCurveStablePart = 2/3; // fraction of the last part of the groth data used for doubling time determination
 // -optimizer parameters
-var controlledParameter = "lights"; // supported parameters to control are none, temperature, lights, GMS, stirrer
+var controlledParameter = "none"; // supported parameters to control are none, temperature, lights, GMS, stirrer
 var parameterSteps = [[ 1100,25 ],[ 440,25 ],[ 55,25 ]]; // values range of the parameter controlled
 /*
 temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
@@ -89,7 +89,7 @@ function controlParameter(parameter, values) {
       case "temperature":
          var thermoreg = theGroup.getAccessory("thermo.thermo-reg");
          var unit = String.fromCharCode(176)+"C";
-         thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values[0])));
+         thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values)));
          break;
       case "GMS":
          var valve0 = theGroup.getAccessory("gas-mixer.valve-0-reg"); // CO2
@@ -102,13 +102,13 @@ function controlParameter(parameter, values) {
       case "stirrer":
          var stirrer = theGroup.getAccessory("pwm.stirrer");
          var unit = "%";
-         stirrer.setRunningProtoConfig(new ProtoConfig(Number(values[0])));
+         stirrer.setRunningProtoConfig(new ProtoConfig(Number(values)));
          break;
       default:
          return;
    }
-   theAccessory.context().put("controlledParameterText", parameter + " " + values.join(" and ") + unit);
-   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + " changed to " + values.join(" and ") + unit);
+   theAccessory.context().put("controlledParameterText", parameter + " " + (values.length() > 1 ? values.join(" and ") : values) + unit);
+   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + " changed to " + (values.length() > 1 ? values.join(" and ") : values) + unit);
 }
 
 // Control the pump
