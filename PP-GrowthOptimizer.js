@@ -4,7 +4,7 @@
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @version 1.9
- * @modified 16.2.2017 (JaCe)
+ * @modified 20.2.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -107,8 +107,8 @@ function controlParameter(parameter, values) {
       default:
          return;
    }
-   theAccessory.context().put("controlledParameterText", parameter + " " + (values.length() > 1 ? values.join(" and ") : values) + unit);
-   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + " changed to " + (values.length() > 1 ? values.join(" and ") : values) + unit);
+   theAccessory.context().put("controlledParameterText", parameter + " " + (Array.isArray(values) ? values.join(" and ") : values) + unit);
+   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + " changed to " + (Array.isArray(values) ? values.join(" and ") : values) + unit);
 }
 
 // Control the pump
