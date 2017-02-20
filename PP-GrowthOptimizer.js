@@ -3,7 +3,7 @@
  *
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 1.9
+ * @version 2.0
  * @modified 20.2.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
@@ -73,6 +73,7 @@ function resetContext() {
    theAccessory.context().remove("dilution");
 }
 
+
 function round(number, decimals) {
    return +(Math.round(number + "e+" + decimals) + "e-" + decimals);
 }
@@ -116,6 +117,12 @@ function controlParameter(parameter, values) {
    }
    theAccessory.context().put("controlledParameterText", parameter + " " + (Array.isArray(values) ? values.join(" and ") : values) + unit);
    theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + " changed to " + (Array.isArray(values) ? values.join(" and ") : values) + unit);
+}
+
+var initialization = Number(theAccessory.context().get("initialization", 0));
+if (!initialization) {
+   theAccessory.context().put("initialization", 1);
+   controlParameter(controlledParameter, parameterSteps[0]);
 }
 
 // Control the pump
