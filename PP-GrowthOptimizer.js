@@ -4,15 +4,7 @@
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @version 1.9
-<<<<<<< HEAD
-<<<<<<< HEAD
  * @modified 20.2.2017 (JaCe)
-=======
- * @modified 22.1.2017 (JaCe)
->>>>>>> origin/master
-=======
- * @modified 22.1.2017 (JaCe)
->>>>>>> origin/master
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -44,20 +36,10 @@ importPackage(Packages.psi.bioreactor.core.regression);
 
 // Static parameters set by user
 // -turbidostat
-<<<<<<< HEAD
 var maxOD = 0.52; // upper bound of OD regulator
 var minOD = 0.48; // lower bound of OD regulator
 var typeOD = 680; // [nm] OD sensor user for turbidostat control
 var intervalOD = 60; // [s] how often is measured OD
-=======
-var maxOD = 0.44; // upper bound of OD regulator
-var minOD = 0.40; // lower bound of OD regulator
-var typeOD = 720; // [nm] OD sensor used for turbidostat control
-var intervalOD = 60; // [s] how often is OD measured
-<<<<<<< HEAD
->>>>>>> origin/master
-=======
->>>>>>> origin/master
 // -peristaltic pump
 var pumpSpeed = 100; // [%] speed of the peristaltic pump
 var slowDownRange = 25; // [%] lower range where the pump slows down
