@@ -4,18 +4,19 @@
  * @script PI-Curve Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Departoment of Adaptive Biotechnologies (JaCe)
  * @version 0.4
- * @modified 11.01.2017 by JaCe
+ * @modified 22.01.2017 by JaCe
  * @notes For proper function of the script "Lights", "Bubble intr. valve" and "Stirrer" protocols have to be disabled
  *
- * @param {number} durationO2 duration of O2 evolution measurement
- * @param {number} durationO2resp duration of O2 respiration measurement
- * @param {number} durationO2relax duration of O2 relaxation phase
- * @param {number} rateEvalPart part of the measurement used for rate evaluation
- * @param {number} measurementPeriod how often to measure PI curves
- * @param {number} periodO2 period of O2 regular measurements
- * @param {number} periodO2fast period of O2 measurements during O2 rates measurement
- * @param {number} stirrerValue couple of values for stirrer during normal and fast (O2 evol/resp) measurement
- * @param {number} lightSteps set of light multipliers for PI curve measurements
+ * @param {number} durationO2 Duration of O2 evolution measurement
+ * @param {number} durationO2resp Duration of O2 respiration measurement
+ * @param {number} durationO2relax Duration of O2 relaxation phase
+ * @param {number} rateEvalPart Last part of the measurement used for rate evaluation
+ * @param {number} measurementPeriod How often to measure PI curves
+ * @param {number} measerementPumpSync Defines whether the measurement is synchronized with dilutions
+ * @param {number} periodO2 Period of O2 regular measurements
+ * @param {number} periodO2fast Period of O2 measurements during PI curve measurement
+ * @param {number} stirrerValue Couple of values for stirrer during normal and fast (O2 evol/resp) measurement
+ * @param {number} lightSteps Set of light multipliers for PI curve measurements
  *
  * @return dO2 measurements period
  *
@@ -27,16 +28,16 @@ importPackage(Packages.psi.bioreactor.core.protocol);
 importPackage(Packages.psi.bioreactor.core.regression);
 
 // Static parameters set by user
-var durationO2 = 120; // [s]
-var durationO2resp = 120; // [s]
-var durationO2relax = 120; // [s]
-var rateEvalPart = 2/3; // [s]
-var measurementPeriod = 7200; // [s]
-var measerementPumpSync = 1; // [0/1] defines whether the measurement is synchronized with dilutions 
-var periodO2 = 60; // [s]
-var periodO2fast = 5; // [s]
+var durationO2 = 120; // [s] duration of O2 evolution measurement
+var durationO2resp = 120; // [s] duration of O2 respiration measurement
+var durationO2relax = 120; // [s] duration of O2 relaxation phase
+var rateEvalPart = 2/3; // [s] dast part of the measurement used for rate evaluation
+var measurementPeriod = 5400; // [s] how often to measure PI curves
+var measurementPumpSync = 1; // [0/1] defines whether the measurement is synchronized with dilutions 
+var periodO2 = 60; // [s] period of O2 regular measurements
+var periodO2fast = 5; // [s] period of O2 measurements during PI curve measurement
 var stirrerValue = [50,60]; // [%] defines normal and fast measurement stirrer intensity
-var lightSteps = [ 0.25, 1, 0.5, 2.75 ];
+var lightSteps = [ 0.25, 1, 0.5, 2.75 ]; // set of light multipliers for PI curve measurements
 //var lightSteps = [ 0.25, 0.5, 1, 6.25 ];
 
 var expDuration = Number(theExperiment.getDurationSec());
@@ -60,6 +61,7 @@ function resetContext() {
    theAccessory.context().remove("light1Value");
    theAccessory.context().remove("rateO2Evol");
    theAccessory.context().remove("rateO2Resp");
+   theAccessory.context().remove("checkupTime");
 }
 
 function round(number, decimals) {
@@ -69,7 +71,6 @@ function round(number, decimals) {
 function controlLights(intensityRed, intensityBlue) {
    light0.setRunningProtoConfig(new ProtoConfig(intensityRed));
    light1.setRunningProtoConfig(new ProtoConfig(intensityBlue));
-   //theExperiment.addEvent("Lights changed to " + intensityRed + "/" + intensityBlue + " uE (Red/Blue)");
 }
 
 if (!initialization) {
@@ -82,9 +83,9 @@ if (!initialization) {
    theAccessory.context().put("measurementTime", measurementTime);
 }
 
-measerementPumpSync ? pumpSet = theAccessory.context().get("modeDilution", 0) : pumpSet = 1;
+measurementPumpSync ? dilution = Number(theGroup.getAccessory("pumps.pump-5").context().get("modeDilution", 0)) : dilution = 1;
 
-if((expDuration >= measurementTime) && pumpSet){
+if((expDuration >= measurementTime) && dilution){
    var changeCounter = Number(theAccessory.context().get("changeCounter", 0));
    var suspended = Number(theAccessory.context().get("suspended", 0));
    var suspendedLights = Number(theAccessory.context().get("suspendedLights", 0));
@@ -93,44 +94,34 @@ if((expDuration >= measurementTime) && pumpSet){
 
    var light0 = theGroup.getAccessory("actinic-lights.light-Red");
    var light1 = theGroup.getAccessory("actinic-lights.light-Blue");
-   //var stirrer = theGroup.getAccessory("pwm.stirrer");
-   //var bubbles = theGroup.getAccessory("switches.valve-0");
 
    if (!suspended) {
       theAccessory.context().put("suspended", 1);
- 	   theAccessory.context().put("modeO2EvolResp", 1);
- 	   resumeTime = expDuration+durationO2+durationO2resp;
- 	   theAccessory.context().put("resumeTime", resumeTime);
- 	   theAccessory.context().put("light0Value", light0.getValue());
+      theAccessory.context().put("modeO2EvolResp", 1);
+      resumeTime = expDuration+durationO2+durationO2resp;
+      theAccessory.context().put("resumeTime", resumeTime);
+      theAccessory.context().put("light0Value", light0.getValue());
       theAccessory.context().put("light1Value", light1.getValue());
-
- 	   if (!changeCounter) theExperiment.addEvent("PI-curve START");
-
- 	   //bubbles.suspend(resumeTime); 
+      if (!changeCounter) theExperiment.addEvent("PI-curve START");
       bubbles.setRunningProtoConfig(ProtoConfig.OFF);
       stirrer.setRunningProtoConfig(new ProtoConfig(stirrerValue[1]));
       controlLights(light0.getValue()*lightSteps[changeCounter],light1.getValue());
    }
    if ((expDuration > (resumeTime-durationO2resp))&&!suspendedLights) {
       theAccessory.context().put("suspendedLights", 1);
-
       light0.suspend(resumeTime);
       light1.suspend(resumeTime);
-
       var regCoefLin = theAccessory.getDataHistory().regression(ETrendFunction.LIN,Math.ceil(rateEvalPart*durationO2/periodO2fast));
       var rateO2Evol = theAccessory.context().get("rateO2Evol",[]);
       rateO2Evol[changeCounter] = round(regCoefLin[1]*600,2);
    }
    if ((expDuration > resumeTime)&&!relaxation) {   
       theAccessory.context().put("relaxation", 1);
-
       controlLights(theAccessory.context().get("light0Value", light0.getValue()),theAccessory.context().get("light1Value", light1.getValue()));
       light0.resume(expDuration);
       light1.resume(expDuration);
-      //bubbles.resume(expDuration);
       bubbles.setRunningProtoConfig(ProtoConfig.ON);
       stirrer.setRunningProtoConfig(new ProtoConfig(stirrerValue[0]));
-
       var regCoefLin = theAccessory.getDataHistory().regression(ETrendFunction.LIN,Math.ceil(rateEvalPart*durationO2resp/periodO2fast));
       var rateO2Resp = theAccessory.context().get("rateO2Resp",[]);
       rateO2Resp[changeCounter] = round(regCoefLin[1]*600,2);
@@ -140,11 +131,9 @@ if((expDuration >= measurementTime) && pumpSet){
       theAccessory.context().put("suspendedLights", 0);
       theAccessory.context().put("relaxation", 0);
       theAccessory.context().put("changeCounter", ++changeCounter);
-
       if (changeCounter >= lightSteps.length) {
          var rateO2Evol = theAccessory.context().get("rateO2Evol",[]);
          var rateO2Resp = theAccessory.context().get("rateO2Resp",[]);
-
          theAccessory.context().put("changeCounter", 0);
          theAccessory.context().put("measurementTime", expDuration+measurementPeriod-lightSteps.length*(durationO2+durationO2resp+durationO2relax));
          theExperiment.addEvent("PI-curve DONE. O2 rates are " + rateO2Evol.join(", ") + " and " + rateO2Resp.join(", ") + " units/min");
@@ -158,10 +147,10 @@ if((expDuration >= measurementTime) && pumpSet){
    result=periodO2fast;
 }
 else {
-   //if (checkupTime>expDuration) {
+   if (expDuration > checkupTime) {
+      theAccessory.context().put("checkupTime", expDuration+60);
       bubbles.setRunningProtoConfig(ProtoConfig.ON);
       stirrer.setRunningProtoConfig(new ProtoConfig(stirrerValue[0]));
-      //theAccessory.context().put("checkupTime", expDuration+60);
-   //}
+   }
    result=periodO2;
 }
