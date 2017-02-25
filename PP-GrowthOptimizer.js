@@ -4,16 +4,16 @@
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @version 2.0
- * @modified 20.2.2017 (JaCe)
+ * @modified 25.2.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
  *        The pump has to be set to ID 5 to allow compatibility with other scripts
  *
- * @param {number} minOD Min OD/lower bound for OD regulator/turbidostat
- * @param {number} maxOD Max OD/upper bound for OD regulator/turbidostat
- * @param {number} typeOD OD sensor used for turbidostat control
- * @param {number} intervalOD Defines how often is OD measured
+ * @param {number} odMin Min OD/lower bound for OD regulator/turbidostat
+ * @param {number} odMax Max OD/upper bound for OD regulator/turbidostat
+ * @param {number} odType OD sensor used for turbidostat control
+ * @param {number} odInterval Defines how often is OD measured
  * @param {number} pumpSpeed Nominal pump speed used for dilution of the suspension
  * @param {number} slowDownRange Lower range where the pump slows down
  * @param {number} slowDownFact Slow down factor for the pump
@@ -36,10 +36,10 @@ importPackage(Packages.psi.bioreactor.core.regression);
 
 // Static parameters set by user
 // -turbidostat
-var maxOD = 0.52; // upper bound of OD regulator
-var minOD = 0.48; // lower bound of OD regulator
-var typeOD = 680; // [nm] OD sensor user for turbidostat control
-var intervalOD = 60; // [s] how often is measured OD
+var odMax = 0.52; // upper bound of OD regulator
+var odMin = 0.48; // lower bound of OD regulator
+var odType = 680; // [nm] OD sensor user for turbidostat control
+var odInterval = 60; // [s] how often is measured OD
 // -peristaltic pump
 var pumpSpeed = 100; // [%] speed of the peristaltic pump
 var slowDownRange = 25; // [%] lower range where the pump slows down
@@ -67,7 +67,7 @@ function resetContext() {
    theAccessory.context().remove("stepDoublingTime");
    theAccessory.context().remove("changeCounter");
    theAccessory.context().remove("lastPumpStop");
-   theAccessory.context().remove("lastOD");
+   theAccessory.context().remove("odLast");
    theAccessory.context().remove("stabilizedTime");
    theAccessory.context().remove("controlledParameterText");
    theAccessory.context().remove("dilution");
@@ -80,10 +80,7 @@ function round(number, decimals) {
 
 // Control accessory functions
 function controlParameter(parameter, values) {
-   if (parameter === undefined) {
-      return;
-   }
-   if (values === undefined) {
+   if ((parameter === undefined) || (parameter === "none") || (values === undefined)) {
       return;
    }
    switch(parameter) {
@@ -127,7 +124,7 @@ if (!initialization) {
 
 // Control the pump
 function controlPump() {
-   switch (typeOD) {
+   switch (odType) {
       case 680:
          odSensorString = "od-sensors.od-680";
          break;
@@ -147,30 +144,30 @@ function controlPump() {
    }
    
    var odVal = odSensor.getValue();
-   var lastOD = Number(theAccessory.context().get("lastOD", 0));
+   var odLast = Number(theAccessory.context().get("odLast", 0));
    var odNoise = Number(theAccessory.context().get("odNoise", 1));
 
    // Check for OD noise/overshots and primitive OD averaging
-   if (!Double.isNaN(odVal) && (round(odVal,3) != round(lastOD,3))) {
+   if (!Double.isNaN(odVal) && (round(odVal,3) != round(odLast,3))) {
       if (odNoise) {
          theAccessory.context().put("odNoise", 0);
-         theAccessory.context().put("lastOD", odVal);
+         theAccessory.context().put("odLast", odVal);
          return null;
       }
-      if (pumpSet || (Math.abs(1-odVal/lastOD) < 0.04)) {
-         odVal = (odVal + lastOD) / 2;
-         theAccessory.context().put("lastOD", odVal);
+      if (pumpSet || (Math.abs(1-odVal/odLast) < 0.04)) {
+         odVal = (odVal + odLast) / 2;
+         theAccessory.context().put("odLast", odVal);
       }
       else {
          theAccessory.context().put("odNoise", 1);
-         theAccessory.context().put("lastOD", odVal);
+         theAccessory.context().put("odLast", odVal);
          return null;
       }
    }
    else return null;
 
    // Start step growth rate evaluation
-   if (odVal > maxOD && !pumpSet) {
+   if (odVal > odMax && !pumpSet) {
       theAccessory.context().put("modeDilution", 1);
       var stepCounter = Number(theAccessory.context().get("stepCounter", 0));
       var expDuration = theAccessory.context().get("expDuration", 0);
@@ -189,7 +186,7 @@ function controlPump() {
       expDuration[stepCounter] = Number(theExperiment.getDurationSec());
       stepDuration[stepCounter] = expDuration[stepCounter]-Number(theAccessory.context().get("lastPumpStop", expDuration[stepCounter]));
       if (stepDuration[stepCounter] > 0) {
-         var DHCapacity = (Math.floor(stepDuration[stepCounter]/intervalOD)-3)>0 ? (Math.floor(stepDuration[stepCounter]/intervalOD)-3) : 60;
+         var DHCapacity = (Math.floor(stepDuration[stepCounter]/odInterval)-3)>0 ? (Math.floor(stepDuration[stepCounter]/odInterval)-3) : 60;
          var regCoefExp = odSensor.getDataHistory().regression(ETrendFunction.EXP,Math.ceil(DHCapacity*growthCurveStablePart));
          stepDoublingTime[stepCounter] = Number(1/(regCoefExp[1]*3600*10))*Math.LN2;
          theExperiment.addEvent("External pump started, doubling time of the step was " + round(stepDoublingTime[stepCounter],2) + " h and step no. is " + (++stepCounter));
@@ -248,13 +245,13 @@ function controlPump() {
       else theExperiment.addEvent("External pump started");
       return theAccessory.getMax(); // fast
    }
-   else if (odVal <= minOD && pumpSet) {
+   else if (odVal <= odMin && pumpSet) {
       theAccessory.context().put("modeDilution", 0);
       theAccessory.context().put("lastPumpStop", theExperiment.getDurationSec());
       theExperiment.addEvent("External pump stopped");
       return ProtoConfig.OFF; // pump off
    }
-   else if (odVal <= (minOD+(maxOD-minOD)*slowDownRange/100) && pumpSet) {
+   else if (odVal <= (odMin+(odMax-odMin)*slowDownRange/100) && pumpSet) {
       return theAccessory.getMax()*slowDownFact/100; // slow down the pump
    }
    else return null; //pump not influenced
