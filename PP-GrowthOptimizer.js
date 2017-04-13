@@ -3,8 +3,8 @@
  *
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 2.0
- * @modified 25.2.2017 (JaCe)
+ * @version 2.1
+ * @modified 11.4.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -20,10 +20,10 @@
  * @param {number} analyzedSteps Number of steps to be analyzed for stability check
  * @param {number} optimalStability Max allowed percents of 95% Confidence Interval
  * @param {number} optimalTrend Max growth speed trend in time
- * @param {numebr} stabilizationTimeMin Minimal duration of each characterization step
- * @param {numebr} growthCurveStablePart Fraction of the last part of the groth data used for doubling time determination
- * @param {numebr} controlledParameter Supported parameters to control are "none", "temperature", "lights", "GMS", "stirrer"
- * @param {numebr} parameterSteps Values range of the parameter controlled
+ * @param {number} stabilizationTimeMin Minimal duration of each characterization step
+ * @param {number} growthRateEvalDelay Time after dilution stops when data for doubling time determination start to be collected - this is to prevent influence of dilution on doubling time evaluation
+ * @param {string} controlledParameter Supported parameters to control are "none", "temperature", "lights", "GMS", "stirrer"
+ * @param {array} parameterSteps Values range of the parameter controlled
  *
  * @return Flow of external/additional pump
  *
@@ -49,7 +49,7 @@ var analyzedSteps = 6; // number of steps to be analyzed for stability check
 var optimalStability = 3.0; // [%] max percents of 95% confidence interval
 var optimalTrend = 1.0; // [%] max trend of change in time
 var stabilizationTimeMin = 12; // [h] minimal time required for stability check
-var growthCurveStablePart = 2/3; // fraction of the last part of the groth data used for doubling time determination
+var growthRateEvalDelay = 1200; // [s] time after dilution stops when data for doubling time determination start to be collected
 // -optimizer parameters
 var controlledParameter = "none"; // supported parameters to control are none, temperature, lights, GMS, stirrer
 var parameterSteps = [[ 1100,25 ],[ 440,25 ],[ 55,25 ]]; // values range of the parameter controlled
@@ -70,7 +70,8 @@ function resetContext() {
    theAccessory.context().remove("odLast");
    theAccessory.context().remove("stabilizedTime");
    theAccessory.context().remove("controlledParameterText");
-   theAccessory.context().remove("dilution");
+   theAccessory.context().remove("modeDilution");
+   theAccessory.context().remove("modeStabilized");
 }
 
 
@@ -169,6 +170,7 @@ function controlPump() {
    // Start step growth rate evaluation
    if (odVal > odMax && !pumpSet) {
       theAccessory.context().put("modeDilution", 1);
+      theAccessory.context().put("modeStabilized", 0);
       var stepCounter = Number(theAccessory.context().get("stepCounter", 0));
       var expDuration = theAccessory.context().get("expDuration", 0);
       var stepDuration = theAccessory.context().get("stepDuration", 0);
@@ -187,7 +189,7 @@ function controlPump() {
       stepDuration[stepCounter] = expDuration[stepCounter]-Number(theAccessory.context().get("lastPumpStop", expDuration[stepCounter]));
       if (stepDuration[stepCounter] > 0) {
          var DHCapacity = (Math.floor(stepDuration[stepCounter]/odInterval)-3)>0 ? (Math.floor(stepDuration[stepCounter]/odInterval)-3) : 60;
-         var regCoefExp = odSensor.getDataHistory().regression(ETrendFunction.EXP,Math.ceil(DHCapacity*growthCurveStablePart));
+         var regCoefExp = odSensor.getDataHistory().regression(ETrendFunction.EXP,Math.ceil(DHCapacity-growthRateEvalDelay/odInterval));
          stepDoublingTime[stepCounter] = Number(1/(regCoefExp[1]*3600*10))*Math.LN2;
          theExperiment.addEvent("External pump started, doubling time of the step was " + round(stepDoublingTime[stepCounter],2) + " h and step no. is " + (++stepCounter));
          theAccessory.context().put("stepCounter", stepCounter);
@@ -220,6 +222,7 @@ function controlPump() {
 
             // Growth stability test and parameters control
             if (stepDoublingTimeIC95 / stepDoublingTimeAvg <= optimalStability / 100 && Math.abs(stepTrend/stepDoublingTimeAvg) <= optimalTrend / 100 && stabilizedTime <= Number(theExperiment.getDurationSec())) {
+               theAccessory.context().put("modeStabilized", 1);
                var changeCounter = Number(theAccessory.context().get("changeCounter", 0));
                theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().get("controlledParameterText", 0) + ") is " + round(stepDoublingTimeAvg,2) + String.fromCharCode(177) + round(stepDoublingTimeIC95,2) + " h (IC95)");
                if (parameterSteps.length > 1) {
