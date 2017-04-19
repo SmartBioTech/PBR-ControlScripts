@@ -25,7 +25,8 @@ var pHmin = 4.52; // lower bound of pH-stat
 var ph = Number(theAccessory.getValue());
 var pump = theGroup.getAccessory("pumps.pump-4");
 if (ph > pHmin) {
-   pump.setRunningProtoConfig(ProtoConfig.ON);
+   //pump.setRunningProtoConfig(ProtoConfig.ON);
+   pump.setRunningProtoConfig(new ProtoConfig(500));
 }
 else
 {
