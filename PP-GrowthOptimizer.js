@@ -7,51 +7,51 @@ var UserDefined = {
    // -peristaltic pump
    peristalticPumpSpeed: 100,
    peristalticPumpSlowDownRange: 25,
-   peristalticPumpSlowDownFactor: 50,
+   peristalticPumpSlowDownFactor: 75,
    // -optimizer stability
    regressionODType: 680,
    analyzedStepsMin: 6,
    intervalOfConfidenceMax: 3.0,
-   growthTrendMax: 1.0,
+   growthTrendMax: 1.5,
    stabilizationTimeMin: 12,
-   growthRateEvalDelay: 600,
+   growthRateEvalDelay: 420,
    // -optimizer parameters
    controlledParameter: "none",
    controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]]
 };
 
 /**
- * OD regulator using external/additional pump
+ * OD Regulator Using External/Additional Pump
  *
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.0
- * @modified 4.6.2017 (JaCe)
+ * @version 3.0.1
+ * @modified 13.6.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
  *        The pump has to be set to ID 5 to allow compatibility with other scripts
  *
- * @param {number} turbidostatODMin - Minimum OD/lower bound for OD regulator/turbidostat
- * @param {number} turbidostatODMax - Maximum OD/upper bound for OD regulator/turbidostat
- * @param {number} turbidostatODType - OD sensor used for turbidostat control
- * @param {number} ODReadoutInterval - Defines how often is OD measured
- * @param {number} peristalticPumpSpeed - Nominal pump speed used for dilution of the suspension
- * @param {number} peristalticPumpSlowDownRange - Lower range where the pump slows down
- * @param {number} peristalticPumpSlowDownFactor - Slow down factor for the pump
- * @param {number} regressionODType - OD sensor used for doubling time determination
- * @param {number} analyzedStepsMin - Number of steps to be analyzed for stability check
- * @param {number} intervalOfConfidenceMax - Maximum allowed percents of 95% Confidence Interval
- * @param {number} growthTrendMax - Maximum growth speed trend in time
- * @param {number} stabilizationTimeMin - Minimum duration of each characterization step
- * @param {number} growthRateEvalDelay - Time after dilution stops when data for doubling time determination start to be collected. This is to prevent influence of post dilution effect on doubling time evaluation
- * @param {string} controlledParameter - Supported parameters to control are "none", "temperature", "lights", "GMS", "stirrer" and "ODRange"
+ * @param {number} turbidostatODMin [AU] - Minimum OD/lower bound for OD regulator/turbidostat
+ * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
+ * @param {number} turbidostatODType [680/720/735] - OD sensor used for turbidostat control
+ * @param {number} ODReadoutInterval [s] - Defines how often is the OD measured
+ * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
+ * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
+ * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
+ * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
+ * @param {number} analyzedStepsMin [-] - Number of steps to be analyzed for stability check
+ * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
+ * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
+ * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
+ * @param {number} growthRateEvalDelay [s] - Time after dilution stops when data for doubling time determination start to be collected. This is to prevent influence of post dilution effect on doubling time evaluation
+ * @param {string} controlledParameter ["none"/"temperature"/"lights"/"GMS"/"stirrer"/"ODRange"] - Supported parameters to control by the script
  * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
  *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
  *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
  *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
  *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
- *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.11]];
+ *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.11]]; // [AU]
  *
  * @return Flow of external/additional pump
  *
@@ -231,7 +231,7 @@ function controlPump() {
       var stepDuration = theAccessory.context().get("stepDuration", 0.0);
       var stepDoublingTime = theAccessory.context().get("stepDoublingTime", 0.0);
       var stabilizedTime = theAccessory.context().getInt("stabilizedTime", 0);
-      if (Array.isArray(expDuration)) {
+      if (!Array.isArray(expDuration)) {
          stepCounter = 0;
          expDuration = []; stepDuration = []; stepDoublingTime = [];
          theAccessory.context().put("expDuration", expDuration);
@@ -245,6 +245,7 @@ function controlPump() {
       if (stepDuration[stepCounter] > 0) {
          var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) : 60;
          var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - UserDefined.growthRateEvalDelay / UserDefined.ODReadoutInterval));
+         debugLogger("Growth parameters: " + regCoefExp.join(", "));
          stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2;
          theExperiment.addEvent("Doubling time of the step was " + round(stepDoublingTime[stepCounter], 2) + " h and step no. is " + (++stepCounter));
          theAccessory.context().put("stepCounter", stepCounter);
@@ -277,17 +278,15 @@ function controlPump() {
                var changeCounter = theAccessory.context().getInt("changeCounter", 0);
                theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().getString("controlledParameterText", "no parameter") + ") is " + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + " h (IC95)");
                if (UserDefined.controlledParameterSteps.length > 1) {
-                  if (changeCounter < UserDefined.controlledParameterSteps.length) {
+                  if (changeCounter < (UserDefined.controlledParameterSteps.length - 1)) {
                      controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[++changeCounter]);
                      theAccessory.context().put("changeCounter", changeCounter);
-                  }
-                  else if (changeCounter < (2 * UserDefined.controlledParameterSteps.length - 1)) {
-                     controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[2 * (UserDefined.controlledParameterSteps.length - 1) - changeCounter]);
-                     theAccessory.context().put("changeCounter", ++changeCounter);
-                  }
-                  else {
-                     controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[0]);
-                     theAccessory.context().put("changeCounter", 0);
+                  } else if (changeCounter < 2 * (UserDefined.controlledParameterSteps.length - 1)) {
+                     controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[2 * (UserDefined.controlledParameterSteps.length - 1) - (++changeCounter)]);
+                     theAccessory.context().put("changeCounter", changeCounter);
+                  } else {
+                     controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[1]);
+                     theAccessory.context().put("changeCounter", 1);
                   }
                   theAccessory.context().remove("stepCounter");
                   theAccessory.context().remove("expDuration");

@@ -1,17 +1,17 @@
 var UserDefinedProtocol = {
    oxygenMeasurementInterval: 60,
-   oxygenRapidMeasurementInterval: 5,
+   oxygenRapidMeasurementInterval: 4,
    oxygenMeasurementDuration: 150,
-   respirationMeasurementDuration: 150,
-   relaxationPhaseDuration: 90,
-   photosynthesisRateCurveEvalFraction: 2/3,
+   respirationMeasurementDuration: 120,
+   relaxationPhaseDuration: 120,
+   photosynthesisRateCurveEvalFraction: 1/2,
    photosynthesisMeasurementPeriod: 10800,
    turbidostatSynchronization: false,
    growthStabilitySynchronization: false,
-   stirrerIntensityValues: [50, 60],
-   lightStepMultiplierValues: [ 1, 1, 1 ],
+   stirrerIntensityValues: [50, 50],
+   lightStepMultiplierValues: [ 1, 1, 1 ], // this means to measure O2 evol./ resp. in triplicate
    lightStepMultiplierColors: ["red"],
-   photosynthesisCurveLightMultiplierValues: [ 1, 1/8, 1/4, 1/2, 1, 2, 4, 8 ]
+   photosynthesisCurveLightMultiplierValues: [ 1 ] // example for PI curve measurement [ 8, 4, 2, 1, 1/2, 1/4, 1/8, 1/16 ]
 };
 
 /**
@@ -19,8 +19,8 @@ var UserDefinedProtocol = {
  *
  * @script PI-Curves Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 1.1
- * @modified 4.6.2017 (JaCe)
+ * @version 1.1.1
+ * @modified 13.6.2017 (JaCe)
  * @notes For proper function of the script following protocols have to be disabled: "Lights", "Bubble intr. valve" and "Stirrer" 
  *
  * @param {number} oxygenMeasurementDuration [s] Duration of O2 evolution measurement
@@ -104,19 +104,18 @@ if (experimentDuration >= measurementTime) {
          bubbles.setRunningProtoConfig(ProtoConfig.OFF);
          stirrer.setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.stirrerIntensityValues[1]));
          controlLights(light0.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter] * UserDefinedProtocol.photosynthesisCurveLightMultiplierValues[multiplierStep], light1.getValue());
-         debugLogger("O2 evolution measurement started.");
       }
-      if ((experimentDuration > (resumeTime - UserDefinedProtocol.respirationMeasurementDuration)) && !lightSuspended) {
+      if ((UserDefinedProtocol.respirationMeasurementDuration > 0 ) && (experimentDuration > (resumeTime - UserDefinedProtocol.respirationMeasurementDuration)) && !lightSuspended) {
          theAccessory.context().put("lightSuspended", 1);
          light0.suspend(resumeTime);
          light1.suspend(resumeTime);
          // TODO should be function1
          regCoefLin = theAccessory.getDataHistory().regression(ETrendFunction.LIN, Math.ceil(UserDefinedProtocol.photosynthesisRateCurveEvalFraction * UserDefinedProtocol.oxygenMeasurementDuration / UserDefinedProtocol.oxygenRapidMeasurementInterval));
+         debugLogger("O2 evol. parameters: " + regCoefLin.join(", "));
          rateO2Evol = theAccessory.context().get("rateO2Evol", []);
          rateO2Evol[changeCounter] = round(regCoefLin[1] * 600, 2);
-         debugLogger("O2 respiration measurement started.");
       }
-      if ((experimentDuration > resumeTime) && !relaxation) {   
+      if ((UserDefinedProtocol.relaxationPhaseDuration > 0) && (experimentDuration > resumeTime) && !relaxation) {   
          theAccessory.context().put("relaxation", 1);
          controlLights(theAccessory.context().getDouble("light0Value", light0.getValue()), theAccessory.context().getDouble("light1Value", light1.getValue()));
          light0.resume(experimentDuration);
@@ -125,9 +124,9 @@ if (experimentDuration >= measurementTime) {
          bubbles.setRunningProtoConfig(ProtoConfig.ON);
          stirrer.setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.stirrerIntensityValues[0]));
          regCoefLin = theAccessory.getDataHistory().regression(ETrendFunction.LIN, Math.ceil(UserDefinedProtocol.photosynthesisRateCurveEvalFraction * UserDefinedProtocol.respirationMeasurementDuration / UserDefinedProtocol.oxygenRapidMeasurementInterval));
+         debugLogger("O2 resp. parameters: " + regCoefLin.join(", "));
          rateO2Resp = theAccessory.context().get("rateO2Resp", []);
          rateO2Resp[changeCounter] = round(regCoefLin[1] * 600, 2);
-         debugLogger("O2 relaxation phase started.");
       }
       if (experimentDuration > (resumeTime + UserDefinedProtocol.relaxationPhaseDuration)) {
          theAccessory.context().put("bubblingSuspended", 0);
@@ -149,7 +148,6 @@ if (experimentDuration >= measurementTime) {
             theAccessory.context().put("multiplierStep", multiplierStep);
             debugLogger("PI-curve finished.");
          }
-         debugLogger("O2 evol./resp. step finished.");
       }
       result = UserDefinedProtocol.oxygenRapidMeasurementInterval;
    }
