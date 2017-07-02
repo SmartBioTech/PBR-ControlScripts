@@ -13,12 +13,57 @@ Script for automatic measurement of oxygen evolution and respiration under diffe
 ### Examples
 
 1. PP-GrowthOptimizer
+
+#### Growth rate (doubling time determination) based on OD680 while diluting acording to OD720
 ```
+turbidostatODType: 720
+regressionODType: 680
 ```
+
+#### Growth characterization uder different temperatures
+```
+controlledParameter: "temperature"
+controlledParameterSteps: [ 28, 32, 34, 30, 26, 22 ]
+```
+
+#### Growth characterization under different lights
+```
+controlledParameter: "lights"
+controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]]
+```
+The lights setting has to be always in pairs, i.e. for each light channel the value has to be specified. Please note the double brackets at the begining and the end of values list
+
 2. O2-PIcurveMeasurement
+
+#### Measurement of O2 evolution/respiration synchronized with turbidostat dilutions
 ```
-lightStepMultiplierValues: [ 1, 1, 1 ] // this setting enables measurement of O2 evolution/respiration in triplicate
+turbidostatSynchronization: true
+growthStabilitySynchronization: true
+lightStepMultiplierValues: [ 1 ]
 ```
+Here it's necessary to run PP-GrowthOptimizer script at the same time with enabled growth statistics
+```
+growthStatistics: true
+```
+
+#### Measurement of O2 evolution/respiration synchronized with turbidostat dilutions and when the culture gets stable
+```
+turbidostatSynchronization: true
+lightStepMultiplierValues: [ 1 ]
+```
+
+
+#### Measurement O2 evolution/respiration in triplicate
+```
+lightStepMultiplierValues: [ 1, 1, 1 ]
+```
+
+#### Measurement of PI-curve
+```
+lightStepMultiplierValues: [ 8, 4, 2, 1, 1/2, 1/4, 1/8, 1/16 ]
+```
+
+This setting enables measurement of PI curve in seven different light intensities defined as multiplier of actual actinic light intensity
 
 ## Authors
 
