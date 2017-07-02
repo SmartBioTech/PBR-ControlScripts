@@ -9,6 +9,7 @@ var UserDefined = {
    peristalticPumpSlowDownRange: 25,
    peristalticPumpSlowDownFactor: 75,
    // -optimizer stability
+   growthStatistics: true,
    regressionODType: 680,
    analyzedStepsMin: 6,
    intervalOfConfidenceMax: 3.0,
@@ -25,8 +26,8 @@ var UserDefined = {
  *
  * @script Peristaltic Pump - Growth Optimizer
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.0.1
- * @modified 13.6.2017 (JaCe)
+ * @version 3.0.2
+ * @modified 2.7.2017 (JaCe)
  *
  * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -39,6 +40,7 @@ var UserDefined = {
  * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
  * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
  * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
+ * @param {number} growthStatistics [true/false] - Enable or disable growth statiscics calculation
  * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
  * @param {number} analyzedStepsMin [-] - Number of steps to be analyzed for stability check
  * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
@@ -242,7 +244,7 @@ function controlPump() {
       }
       expDuration[stepCounter] = theExperiment.getDurationSec();
       stepDuration[stepCounter] = expDuration[stepCounter] - theAccessory.context().getInt("lastPumpStop", expDuration[stepCounter]);
-      if (stepDuration[stepCounter] > 0) {
+      if ((stepDuration[stepCounter] > 0) && growthStatistics) {
          var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) : 60;
          var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - UserDefined.growthRateEvalDelay / UserDefined.ODReadoutInterval));
          debugLogger("Growth parameters: " + regCoefExp.join(", "));
