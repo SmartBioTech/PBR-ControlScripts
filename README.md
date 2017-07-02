@@ -5,14 +5,14 @@ Set of Control Scripts for PSI Bioreactor Client software developed in Departmen
 
 Put one of the below listed .js file content to PSI Bioreactor Client software protocol scripting part and modify appropriately UserDefined section (object).
 
-1. [PP-GrowthOptimizer](https://gcri-doab.github.io/PBR-Scripts/PP-GrowthOptimizer.js)
+* [PP-GrowthOptimizer](https://gcri-doab.github.io/PBR-Scripts/PP-GrowthOptimizer.js)
 Script for automatic quazi-continous characterization and consequent optimization of microorganism cultivated in PBRs based on programatic control of selected PBR parameters. The script is activated on a peristaltic pump scripting protocol.
-2. [O2-PIcurveMeasurement](https://gcri-doab.github.io/PBR-Scripts/O2-PIcurveMeasurement.js)
+* [O2-PIcurveMeasurement](https://gcri-doab.github.io/PBR-Scripts/O2-PIcurveMeasurement.js)
 Script for automatic measurement of oxygen evolution and respiration under different irradiances (PI curve measurements). The script is activated on the oxygen probe (O2 dissolved) scripting protocol.
 
 ### Examples
 
-1. PP-GrowthOptimizer
+* PP-GrowthOptimizer
 
 #### Growth rate (doubling time determination) based on OD680 while diluting acording to OD720
 ```
@@ -33,7 +33,7 @@ controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]]
 ```
 The lights setting has to be always in pairs, i.e. for each light channel the value has to be specified. Please note the double brackets at the begining and the end of values list
 
-2. O2-PIcurveMeasurement
+* O2-PIcurveMeasurement
 
 #### Measurement of O2 evolution/respiration synchronized with turbidostat dilutions
 ```
@@ -79,6 +79,6 @@ Licensed under [MIT license](https://gcri-doab.github.io/PBR-Scripts/LICENSE)
 
 Projects supporting development:
 
-1. Services and access to state-of-the-art facilities for systems biology across Europe; project „Center for Systems Biology ([C4Sys](http://c4sys.cz))“
-2. Innovations for mitigation of global change impacts; project „[CzechGlobe 2020](http://www.czechglobe.cz/en/) – Development of the Centre of Global Climate Change Impacts Studies“
-3. Investigation on dynamics of complex reaction networks in enzyme reactors and photobioreactorsproject
+* Services and access to state-of-the-art facilities for systems biology across Europe; project „Center for Systems Biology ([C4Sys](http://c4sys.cz))“
+* Innovations for mitigation of global change impacts; project „[CzechGlobe 2020](http://www.czechglobe.cz/en/) – Development of the Centre of Global Climate Change Impacts Studies“
+* Investigation on dynamics of complex reaction networks in enzyme reactors and photobioreactorsproject
