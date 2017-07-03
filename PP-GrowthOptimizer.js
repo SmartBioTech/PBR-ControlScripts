@@ -24,14 +24,14 @@ var UserDefined = {
 /**
  * OD Regulator Using External/Additional Pump
  *
- * @script Peristaltic Pump - Growth Optimizer
+ * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.0.2
- * @modified 2.7.2017 (JaCe)
+ * @version 3.0.3
+ * @modified 3.7.2017 (JaCe)
  *
- * @notes For proper function of the script "OD Regulator" protocol has to be disabled as well as appropriate
- *        controlled accessory protocol (i.e. Lights, Thermoregulation, GMS, Stirrer).
- *        The pump has to be set to ID 5 to allow compatibility with other scripts
+ * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as appropriate
+ *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
+ *        The controlled pump has to be set to ID 5 to allow compatibility with other scripts
  *
  * @param {number} turbidostatODMin [AU] - Minimum OD/lower bound for OD regulator/turbidostat
  * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
@@ -40,20 +40,21 @@ var UserDefined = {
  * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
  * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
  * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
- * @param {number} growthStatistics [true/false] - Enable or disable growth statiscics calculation
+ * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics
  * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
  * @param {number} analyzedStepsMin [-] - Number of steps to be analyzed for stability check
  * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
  * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
  * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
- * @param {number} growthRateEvalDelay [s] - Time after dilution stops when data for doubling time determination start to be collected. This is to prevent influence of post dilution effect on doubling time evaluation
+ * @param {number} growthRateEvalDelay [s] - Time after dilution stops when data for doubling time determination
+ *                 start to be collected. This is to prevent influence of post dilution effect on doubling time evaluation
  * @param {string} controlledParameter ["none"/"temperature"/"lights"/"GMS"/"stirrer"/"ODRange"] - Supported parameters to control by the script
  * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
  *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
  *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
  *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
  *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
- *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.11]]; // [AU]
+ *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
  *
  * @return Flow of external/additional pump
  *
