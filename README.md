@@ -3,7 +3,7 @@ Set of Control Scripts for PSI Bioreactor Client software developed in Departmen
 
 ## Getting Started
 
-Put one of the below listed .js file content to PSI Bioreactor Client software [protocol scripting part](https://gcri-doab.github.io/PBR-Scripts/img/PBR-SW_script.png) and modify appropriately UserDefined section (object).
+Put one of the below listed .js file content to PSI Bioreactor Client software [protocol scripting part](https://gcri-doab.github.io/PBR-Scripts/img/PBR-SW_Script.png) and modify appropriately UserDefined section (object).
 
 * [PP-GrowthOptimizer](https://gcri-doab.github.io/PBR-Scripts/PP-GrowthOptimizer.js)
 Script for automatic quazi-continous characterization and consequent optimization of microorganism cultivated in PBRs based on programatic control of selected PBR parameters. The script is activated on a peristaltic pump scripting protocol.
