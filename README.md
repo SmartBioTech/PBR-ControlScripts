@@ -14,6 +14,8 @@ Script for automatic measurement of oxygen evolution and respiration under diffe
 
 * PP-GrowthOptimizer
 
+The pump where the script is activated has to be set to ID 5 by default to allow compatibility with other scripts.
+
 #### Growth rate (doubling time determination) based on OD680 while diluting acording to OD720
 ```
 turbidostatODType: 720
