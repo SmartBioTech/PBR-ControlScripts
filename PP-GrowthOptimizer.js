@@ -245,7 +245,7 @@ function controlPump() {
       }
       expDuration[stepCounter] = theExperiment.getDurationSec();
       stepDuration[stepCounter] = expDuration[stepCounter] - theAccessory.context().getInt("lastPumpStop", expDuration[stepCounter]);
-      if ((stepDuration[stepCounter] > 0) && growthStatistics) {
+      if ((stepDuration[stepCounter] > 0) && UserDefined.growthStatistics) {
          var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) : 60;
          var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - UserDefined.growthRateEvalDelay / UserDefined.ODReadoutInterval));
          debugLogger("Growth parameters: " + regCoefExp.join(", "));
