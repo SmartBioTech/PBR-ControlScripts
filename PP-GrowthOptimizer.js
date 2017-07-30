@@ -1,4 +1,4 @@
-var UserDefined = {
+var UserDefinedProtocol = {
    // -turbidostat
    turbidostatODMin: 0.4,
    turbidostatODMax: 0.425,
@@ -114,8 +114,8 @@ function controlParameter(parameter, values) {
          debugLogger("Stirrer changed.");
          break;
       case "ODRange":
-         theAccessory.context().put("odMinModifier", Number(values[0]) / UserDefined.turbidostatODMin);
-         theAccessory.context().put("odMaxModifier", Number(values[1]) / UserDefined.turbidostatODMax);
+         theAccessory.context().put("odMinModifier", Number(values[0]) / UserDefinedProtocol.turbidostatODMin);
+         theAccessory.context().put("odMaxModifier", Number(values[1]) / UserDefinedProtocol.turbidostatODMax);
          unit = " AU";
          debugLogger("Turbidostat OD range changed.");
          break;
@@ -128,13 +128,13 @@ function controlParameter(parameter, values) {
 // Inicialization of the script
 if (!theAccessory.context().getInt("initialization", 0)) {
    theAccessory.context().clear();
-   controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[0]);
+   controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0]);
    theAccessory.context().put("initialization", 1);
    debugLogger("Peristaltic Pump - Growth Optimizer initialization successful.");
 }
 function setODSensorString(ODType) {
    // Set ODtype = [turbidostat, regression]
-   switch (UserDefined[ODType+"ODType"]) {
+   switch (UserDefinedProtocol[ODType+"ODType"]) {
       case 680:
          odString = "od-sensors.od-680";
          break;
@@ -165,7 +165,7 @@ function controlPump() {
    //Followinf ready for function
    //setODSensorString("turbidostat");
    //setODSensorString("regression");
-   switch (UserDefined.turbidostatODType) {
+   switch (UserDefinedProtocol.turbidostatODType) {
       case 680:
          odSensorString = "od-sensors.od-680";
          break;
@@ -178,7 +178,7 @@ function controlPump() {
       default:
          odSensorString = "od-sensors.od-680";
    }
-   switch (UserDefined.regressionODType) {
+   switch (UserDefinedProtocol.regressionODType) {
       case 680:
          odSensorRegressionString = "od-sensors.od-680";
          break;
@@ -221,12 +221,12 @@ function controlPump() {
       return null;
    }
    // Check for reversed OD range
-   if (UserDefined.turbidostatODMin > UserDefined.turbidostatODMax) {
-      UserDefined.turbidostatODMin = (UserDefined.turbidostatODMax - UserDefined.turbidostatODMin) + (UserDefined.turbidostatODMax = UserDefined.turbidostatODMin);
+   if (UserDefinedProtocol.turbidostatODMin > UserDefinedProtocol.turbidostatODMax) {
+      UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin);
       debugLogger("OD range reversed.", 0);
    }
    // Start step growth rate evaluation
-   if ((odValue > (UserDefined.turbidostatODMax * odMaxModifier)) && !pumpState) {
+   if ((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState) {
       theAccessory.context().put("modeDilution", 1);
       theAccessory.context().put("modeStabilized", 0);
       var stepCounter = theAccessory.context().getInt("stepCounter", 0);
@@ -240,55 +240,55 @@ function controlPump() {
          theAccessory.context().put("expDuration", expDuration);
          theAccessory.context().put("stepDuration", stepDuration);
          theAccessory.context().put("stepDoublingTime", stepDoublingTime);
-         theAccessory.context().put("stabilizedTime", theExperiment.getDurationSec() + UserDefined.stabilizationTimeMin * 3600);
+         theAccessory.context().put("stabilizedTime", theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600);
          odSensorRegression.getDataHistory().setCapacity(600);
       }
       expDuration[stepCounter] = theExperiment.getDurationSec();
       stepDuration[stepCounter] = expDuration[stepCounter] - theAccessory.context().getInt("lastPumpStop", expDuration[stepCounter]);
-      if ((stepDuration[stepCounter] > 0) && UserDefined.growthStatistics) {
-         var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefined.ODReadoutInterval) - 3) : 60;
-         var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - UserDefined.growthRateEvalDelay / UserDefined.ODReadoutInterval));
+      if ((stepDuration[stepCounter] > 0) && UserDefinedProtocol.growthStatistics) {
+         var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60;
+         var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval));
          debugLogger("Growth parameters: " + regCoefExp.join(", "));
          stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2;
          theExperiment.addEvent("Doubling time of the step was " + round(stepDoublingTime[stepCounter], 2) + " h and step no. is " + (++stepCounter));
          theAccessory.context().put("stepCounter", stepCounter);
-         if (stepCounter >= UserDefined.analyzedStepsMin) {
+         if (stepCounter >= UserDefinedProtocol.analyzedStepsMin) {
             var stepDoublingTimeAvg = 0; var stepDoublingTimeSD = 0; var stepDoublingTimeIC95 = 0; var stepTrend = 0; var sumXY = 0; var sumX = 0; var sumY = 0; var sumX2 = 0; var sumY2 = 0;
             // Average of steps doubling time
-            for (var i = (stepCounter - 1); i >= (stepCounter - UserDefined.analyzedStepsMin); i--) {
+            for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
                stepDoublingTimeAvg += Number(stepDoublingTime[i]);
             }
-            stepDoublingTimeAvg /= UserDefined.analyzedStepsMin;
+            stepDoublingTimeAvg /= UserDefinedProtocol.analyzedStepsMin;
             // IC95 of steps doubling time
-            for (i = (stepCounter - 1); i >= (stepCounter - UserDefined.analyzedStepsMin); i--) {
+            for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
                stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2);
             }
-            stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD/UserDefined.analyzedStepsMin);
-            stepDoublingTimeIC95 = stepDoublingTimeSD/Math.sqrt(UserDefined.analyzedStepsMin) * 1.96;
+            stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD/UserDefinedProtocol.analyzedStepsMin);
+            stepDoublingTimeIC95 = stepDoublingTimeSD/Math.sqrt(UserDefinedProtocol.analyzedStepsMin) * 1.96;
             // Trend of steps doubling time
-            for (i = (stepCounter - 1); i >= (stepCounter - UserDefined.analyzedStepsMin); i--) {
+            for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
                sumX += Number(expDuration[i]);
                sumX2 += Math.pow(expDuration[i], 2);
                sumY += Number(stepDoublingTime[i]);
                sumY2 += Math.pow(stepDoublingTime[i], 2);
                sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i]);
             }
-            stepTrend = (UserDefined.analyzedStepsMin * sumXY - sumX * sumY) / (UserDefined.analyzedStepsMin * sumX2 - Math.pow(sumX, 2)) * 3600;
+            stepTrend = (UserDefinedProtocol.analyzedStepsMin * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedStepsMin * sumX2 - Math.pow(sumX, 2)) * 3600;
             theExperiment.addEvent("Steps doubling time Avg: " + round(stepDoublingTimeAvg, 2) + " h, IC95 " + round(stepDoublingTimeIC95, 2) + " (" + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + "%) with " + round(stepTrend, 2) + " h/h trend (" + round(stepTrend / stepDoublingTimeAvg * 100, 1) + "%)");
             // Growth stability test and parameters control
-            if ((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefined.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefined.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) {
+            if ((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) {
                theAccessory.context().put("modeStabilized", 1);
                var changeCounter = theAccessory.context().getInt("changeCounter", 0);
                theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().getString("controlledParameterText", "no parameter") + ") is " + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + " h (IC95)");
-               if (UserDefined.controlledParameterSteps.length > 1) {
-                  if (changeCounter < (UserDefined.controlledParameterSteps.length - 1)) {
-                     controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[++changeCounter]);
+               if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
+                  if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
+                     controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter]);
                      theAccessory.context().put("changeCounter", changeCounter);
-                  } else if (changeCounter < 2 * (UserDefined.controlledParameterSteps.length - 1)) {
-                     controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[2 * (UserDefined.controlledParameterSteps.length - 1) - (++changeCounter)]);
+                  } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
+                     controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)]);
                      theAccessory.context().put("changeCounter", changeCounter);
                   } else {
-                     controlParameter(UserDefined.controlledParameter, UserDefined.controlledParameterSteps[1]);
+                     controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1]);
                      theAccessory.context().put("changeCounter", 1);
                   }
                   theAccessory.context().remove("stepCounter");
@@ -301,14 +301,14 @@ function controlPump() {
       }
       debugLogger("Pump max speed.");
       return theAccessory.getMax(); // fast
-   } else if ((odValue <= (UserDefined.turbidostatODMin * odMinModifier)) && pumpState) {
+   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier)) && pumpState) {
       theAccessory.context().put("modeDilution", 0);
       theAccessory.context().put("lastPumpStop", theExperiment.getDurationSec());
       debugLogger("Pump stopped.");
       return ProtoConfig.OFF; // pump off
-   } else if ((odValue <= (UserDefined.turbidostatODMin * odMinModifier + ((UserDefined.turbidostatODMax * odMaxModifier) - (UserDefined.turbidostatODMin * odMinModifier)) * UserDefined.peristalticPumpSlowDownRange / 100)) && pumpState) {
+   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier + ((UserDefinedProtocol.turbidostatODMax * odMaxModifier) - (UserDefinedProtocol.turbidostatODMin * odMinModifier)) * UserDefinedProtocol.peristalticPumpSlowDownRange / 100)) && pumpState) {
       debugLogger("Pump low speed.", 0);
-      return theAccessory.getMax() * UserDefined.peristalticPumpSlowDownFactor / 100; // slow down the pump
+      return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100; // slow down the pump
    } else {
       return null; //pump not influenced
    }
