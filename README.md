@@ -7,6 +7,7 @@ Put one of the below listed .js file content to PSI Bioreactor Client software [
 
 * [PP-GrowthOptimizer](https://gcri-doab.github.io/PBR-Scripts/PP-GrowthOptimizer.js)
 Script for automatic quazi-continous characterization and consequent optimization of microorganism cultivated in PBRs based on programatic control of selected PBR parameters. The script is activated on a peristaltic pump scripting protocol.
+Data postprocessing including growth rates (doubling times) calculation is available [here](https://gcri-doab.shinyapps.io/PBR-DataAnalysis/).
 * [O2-PIcurveMeasurement](https://gcri-doab.github.io/PBR-Scripts/O2-PIcurveMeasurement.js)
 Script for automatic measurement of oxygen evolution and respiration under different irradiances (PI curve measurements). The script is activated on the oxygen probe (O2 dissolved) scripting protocol.
 
