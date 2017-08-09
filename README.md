@@ -17,7 +17,7 @@ Script for automatic measurement of oxygen evolution and respiration under diffe
 
 The pump where the script is activated has to be set to ID 5 by default to allow compatibility with other scripts.
 
-#### Growth rate (doubling time determination) based on OD680 while diluting acording to OD720
+#### Growth rate (doubling time calculation) based on OD<sub>680</sub> while diluting according to OD<sub>720</sub>
 ```
 turbidostatODType: 720
 regressionODType: 680
