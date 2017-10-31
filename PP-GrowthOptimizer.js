@@ -1,14 +1,15 @@
 var UserDefinedProtocol = {
-   // -turbidostat
+   // -turbidostat settings
    turbidostatODMin: 0.4,
    turbidostatODMax: 0.425,
    turbidostatODType: 720,
    ODReadoutInterval: 60,
-   // -peristaltic pump
+   // -peristaltic pump settings
+   peristalticPumpID: 5,
    peristalticPumpSpeed: 100,
    peristalticPumpSlowDownRange: 25,
    peristalticPumpSlowDownFactor: 75,
-   // -optimizer stability
+   // -optimizer stability check
    growthStatistics: true,
    regressionODType: 680,
    analyzedStepsMin: 6,
