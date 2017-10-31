@@ -17,6 +17,8 @@ var UserDefinedProtocol = {
    growthTrendMax: 1.5,
    stabilizationTimeMin: 12,
    growthRateEvalDelay: 420,
+   growthRateEvalFrac: 1,
+   growthRateEvalDelayFrac: 50,
    // -optimizer parameters
    controlledParameter: "none",
    controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]]
@@ -27,8 +29,8 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.0.3
- * @modified 3.7.2017 (JaCe)
+ * @version 3.0.4
+ * @modified 19.10.2017 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -48,6 +50,8 @@ var UserDefinedProtocol = {
  * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
  * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
  * @param {number} growthRateEvalDelay [s] - Time after dilution stops when data for doubling time determination
+ * @param {number} growthRateEvalFrac [0/1] - Defines whether to use fraction or time for doubling time determination
+ * @param {number} growthRateEvalDelayFrac [%] - Last fraction of data for doubling time determination
  *                 start to be collected. This is to prevent influence of post dilution effect on doubling time evaluation
  * @param {string} controlledParameter ["none"/"temperature"/"lights"/"GMS"/"stirrer"/"ODRange"] - Supported parameters to control by the script
  * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
@@ -248,7 +252,7 @@ function controlPump() {
       stepDuration[stepCounter] = expDuration[stepCounter] - theAccessory.context().getInt("lastPumpStop", expDuration[stepCounter]);
       if ((stepDuration[stepCounter] > 0) && UserDefinedProtocol.growthStatistics) {
          var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60;
-         var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval));
+         var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedPtorocol.growthRateEvalFrac ? DHCapacity * (1 - UserDefinedProtocol.growthRateEvalDelayFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)));
          debugLogger("Growth parameters: " + regCoefExp.join(", "));
          stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2;
          theExperiment.addEvent("Doubling time of the step was " + round(stepDoublingTime[stepCounter], 2) + " h and step no. is " + (++stepCounter));
@@ -275,12 +279,12 @@ function controlPump() {
                sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i]);
             }
             stepTrend = (UserDefinedProtocol.analyzedStepsMin * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedStepsMin * sumX2 - Math.pow(sumX, 2)) * 3600;
-            theExperiment.addEvent("Steps doubling time Avg: " + round(stepDoublingTimeAvg, 2) + " h, IC95 " + round(stepDoublingTimeIC95, 2) + " (" + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + "%) with " + round(stepTrend, 2) + " h/h trend (" + round(stepTrend / stepDoublingTimeAvg * 100, 1) + "%)");
+            theExperiment.addEvent("Steps doubling time Avg: " + round(stepDoublingTimeAvg, 2) + " h, IC95 " + round(stepDoublingTimeIC95, 2) + " h (" + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + "%) with " + round(stepTrend, 2) + " h/h trend (" + round(stepTrend / stepDoublingTimeAvg * 100, 1) + "%)");
             // Growth stability test and parameters control
             if ((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) {
                theAccessory.context().put("modeStabilized", 1);
                var changeCounter = theAccessory.context().getInt("changeCounter", 0);
-               theExperiment.addEvent("*** Stabilized doubling time TD (" + theAccessory.context().getString("controlledParameterText", "no parameter") + ") is " + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + " h (IC95)");
+               theExperiment.addEvent("*** Stabilized doubling time TD (" + theGroup.getAccessory("thermo.thermo-reg").getValue() + String.fromCharCode(176) + "C, " + theAccessory.context().getString("controlledParameterText", "no parameter") + ") is " + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + " h (IC95)");
                if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
                   if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
                      controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter]);
