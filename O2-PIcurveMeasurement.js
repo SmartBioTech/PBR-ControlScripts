@@ -89,7 +89,7 @@ if (experimentDuration >= measurementTime) {
       // PI-curve phase parameters 
       var bubblingSuspended = theAccessory.context().getInt("bubblingSuspended", 0);
       var photosynthesis = theAccessory.context().getInt("photosynthesis", 0);
-      var respiratiom = theAccessory.context().getInt("respiratiom", 0);
+      var respiration = theAccessory.context().getInt("respiration", 0);
       // Accessories inicialization
       var stirrer = theGroup.getAccessory("pwm.stirrer");
       var bubbles = theGroup.getAccessory("switches.valve-0");
@@ -139,7 +139,7 @@ if (experimentDuration >= measurementTime) {
       if (experimentDuration > (resumeTime + UserDefinedProtocol.relaxationPhaseDuration)) {
          theAccessory.context().put("bubblingSuspended", 0);
          theAccessory.context().put("photosynthesis", 0);
-         theAccessory.context().put("respiratiom", 0);
+         theAccessory.context().put("respiration", 0);
          theAccessory.context().put("changeCounter", ++changeCounter);
          if (changeCounter >= UserDefinedProtocol.lightStepMultiplierValues.length) {
             rateO2Evol = theAccessory.context().get("rateO2Evol", []);
