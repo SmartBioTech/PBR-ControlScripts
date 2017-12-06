@@ -9,7 +9,7 @@ Put one of the below listed .js file content to PSI Bioreactor Client software [
 Script for automatic quazi-continous characterization and consequent optimization of microorganism cultivated in PBRs based on programatic control of selected PBR parameters. The script is activated on a peristaltic pump scripting protocol.
 Data postprocessing including growth rates (doubling times) calculation is available [here](https://gcri-doab.shinyapps.io/PBR-DataAnalysis/).
 * [O2-PIcurveMeasurement](https://gcri-doab.github.io/PBR-Scripts/O2-PIcurveMeasurement.js)
-Script for automatic measurement of oxygen evolution and respiration under different irradiances (PI curve measurements). The script is activated on the oxygen probe (O~2~ dissolved) scripting protocol.
+Script for automatic measurement of oxygen evolution and respiration under different irradiances (PI curve measurements). The script is activated on the oxygen probe (O<sub>2</sub> dissolved) scripting protocol.
 
 ### Examples
 
@@ -17,7 +17,7 @@ Script for automatic measurement of oxygen evolution and respiration under diffe
 
 The pump where the script is activated has to be set to ID 5 by default to allow compatibility with other scripts.
 
-#### Growth rate (doubling time calculation) based on OD~680~ while diluting according to OD~720~
+#### Growth rate (doubling time calculation) based on OD<sub>680</sub> while diluting according to OD<sub>720</sub>
 ```
 turbidostatODType: 720
 regressionODType: 680
