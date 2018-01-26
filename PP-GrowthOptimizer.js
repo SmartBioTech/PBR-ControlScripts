@@ -252,7 +252,7 @@ function controlPump() {
       stepDuration[stepCounter] = expDuration[stepCounter] - theAccessory.context().getInt("lastPumpStop", expDuration[stepCounter]);
       if ((stepDuration[stepCounter] > 0) && UserDefinedProtocol.growthStatistics) {
          var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60;
-         var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedPtorocol.growthRateEvalFrac ? DHCapacity * (1 - UserDefinedProtocol.growthRateEvalDelayFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)));
+         var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (1 - UserDefinedProtocol.growthRateEvalDelayFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)));
          debugLogger("Growth parameters: " + regCoefExp.join(", "));
          stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2;
          theExperiment.addEvent("Doubling time of the step was " + round(stepDoublingTime[stepCounter], 2) + " h and step no. is " + (++stepCounter));
