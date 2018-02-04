@@ -133,6 +133,20 @@ function controlParameter(parameter, values) {
 // Inicialization of the script
 if (!theAccessory.context().getInt("initialization", 0)) {
    theAccessory.context().clear();
+   if (UserDefinedProtocol.turbidostatODType === 720 || 735) {
+      if(theGroup.getAccessory("od-sensors.od-720") === null) {
+         theAccessory.context().put("OD7XYString", "od-sensors.od-735");
+      } else {
+         theAccessory.context().put("OD7XYString", "od-sensors.od-720");
+      }
+   }
+   if (UserDefinedProtocol.regressionODType === 720 || 735) {
+      if(theGroup.getAccessory("od-sensors.od-720") === null) {
+         theAccessory.context().put("RegOD7XYString", "od-sensors.od-735");
+      } else {
+         theAccessory.context().put("RegOD7XYString", "od-sensors.od-720");
+      }
+   }
    controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0]);
    theAccessory.context().put("initialization", 1);
    debugLogger("Peristaltic Pump - Growth Optimizer initialization successful.");
@@ -174,27 +188,15 @@ function controlPump() {
       case 680:
          odSensorString = "od-sensors.od-680";
          break;
-      case 720:
-         odSensorString = "od-sensors.od-720";
-         break;
-      case 735:
-         odSensorString = "od-sensors.od-735";
-         break;
       default:
-         odSensorString = "od-sensors.od-680";
+         odSensorString = theAccessory.context().get("OD7XYString", "od-sensors.od-720");
    }
    switch (UserDefinedProtocol.regressionODType) {
       case 680:
          odSensorRegressionString = "od-sensors.od-680";
          break;
-      case 720:
-         odSensorRegressionString = "od-sensors.od-720";
-         break;
-      case 735:
-         odSensorRegressionString = "od-sensors.od-735";
-         break;
       default:
-         odSensorRegressionString = "od-sensors.od-680";
+         odSensorRegressionString = theAccessory.context().get("RegOD7XYString", "od-sensors.od-720");
    }
    var odSensor = theGroup.getAccessory(odSensorString);
    var odSensorRegression = theGroup.getAccessory(odSensorRegressionString);
