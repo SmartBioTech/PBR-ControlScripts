@@ -133,6 +133,36 @@ function controlParameter(parameter, values) {
 // Inicialization of the script
 if (!theAccessory.context().getInt("initialization", 0)) {
    theAccessory.context().clear();
+   switch(parameter) {
+      case "lights":
+         if (theGroup.getAccessory("actinic-lights.light-Red").getProtoConfigValue()) {
+            theExperiment.addEvent("Disable red light protocol!!!");
+         }
+         if (theGroup.getAccessory("actinic-lights.light-Blue").getProtoConfigValue()) {
+            theExperiment.addEvent("Disable red light protocol!!!");
+         }
+         break;
+      case "temperature":
+         if (theGroup.getAccessory("thermo.thermo-reg").getProtoConfigValue()) {
+            theExperiment.addEvent("Disable thermoregulator protocol!!!");
+         }
+         break;
+      case "GMS":
+         if (theGroup.getAccessory("gas-mixer.valve-0-reg").getProtoConfigValue()) {
+            theExperiment.addEvent("Disable GMS CO2 protocol!!!");
+         }
+         if (theGroup.getAccessory("gas-mixer.valve-1-reg").getProtoConfigValue()) {
+            theExperiment.addEvent("Disable GMS Air/N2 protocol!!!");
+         }
+         break;
+      case "stirrer":
+         if (theGroup.getAccessory("pwm.stirrer").getProtoConfigValue()) {
+            theExperiment.addEvent("Disable stirrer protocol!!!");
+         }
+         break;
+      default:
+         return;
+   }
    controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0]);
    theAccessory.context().put("initialization", 1);
    debugLogger("Peristaltic Pump - Growth Optimizer initialization successful.");
