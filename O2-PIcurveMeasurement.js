@@ -66,6 +66,12 @@ function controlLights(intensityRed, intensityBlue) {
 }
 if (!theAccessory.context().getBool("initialization", false)) {
    theAccessory.context().clear();
+   if (theGroup.getAccessory("pwm.stirrer").getProtoConfigValue()) {
+      theExperiment.addEvent("Clear stirrer protocol!!!");
+   }
+   if (theGroup.getAccessory("switches.valve-0").getProtoConfigValue()) {
+      theExperiment.addEvent("Clear bubble intr. valve protocol!!!");
+   }
    theAccessory.getDataHistory().setCapacity(Math.max(UserDefinedProtocol.oxygenMeasurementDuration,  UserDefinedProtocol.respirationMeasurementDuration));
    theAccessory.context().put("rateO2Evol", []);
    theAccessory.context().put("rateO2Resp", []);
