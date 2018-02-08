@@ -17,7 +17,7 @@ var UserDefinedProtocol = {
    growthTrendMax: 1.5,
    stabilizationTimeMin: 12,
    growthRateEvalDelay: 420,
-   growthRateEvalFrac: 1,
+   growthRateEvalFrac: false,
    growthRateEvalDelayFrac: 50,
    // -optimizer parameters
    controlledParameter: "none",
@@ -29,8 +29,8 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.0.4
- * @modified 19.10.2017 (JaCe)
+ * @version 3.0.5
+ * @modified 8.2.2018 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -49,9 +49,9 @@ var UserDefinedProtocol = {
  * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
  * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
  * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
- * @param {number} growthRateEvalDelay [s] - Time after dilution stops when data for doubling time determination
- * @param {number} growthRateEvalFrac [0/1] - Defines whether to use fraction or time for doubling time determination
- * @param {number} growthRateEvalDelayFrac [%] - Last fraction of data for doubling time determination
+ * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored
+ * @param {number} growthRateEvalFrac [true/false] - Defines whether to use fraction or time for doubling time determination
+ * @param {number} growthRateEvalDelayFrac [%] - Fraction of first part of data that are ignored for doubling time determination
  *                 start to be collected. This is to prevent influence of post dilution effect on doubling time evaluation
  * @param {string} controlledParameter ["none"/"temperature"/"lights"/"GMS"/"stirrer"/"ODRange"] - Supported parameters to control by the script
  * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
@@ -163,6 +163,20 @@ if (!theAccessory.context().getInt("initialization", 0)) {
       default:
          return;
    }
+   if (UserDefinedProtocol.turbidostatODType === 720 || 735) {
+      if(theGroup.getAccessory("od-sensors.od-720") === null) {
+         theAccessory.context().put("OD7XYString", "od-sensors.od-735");
+      } else {
+         theAccessory.context().put("OD7XYString", "od-sensors.od-720");
+      }
+   }
+   if (UserDefinedProtocol.regressionODType === 720 || 735) {
+      if(theGroup.getAccessory("od-sensors.od-720") === null) {
+         theAccessory.context().put("RegOD7XYString", "od-sensors.od-735");
+      } else {
+         theAccessory.context().put("RegOD7XYString", "od-sensors.od-720");
+      }
+   }
    controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0]);
    theAccessory.context().put("initialization", 1);
    debugLogger("Peristaltic Pump - Growth Optimizer initialization successful.");
@@ -197,34 +211,22 @@ function setODSensorString(ODType) {
 }
 function controlPump() {
    // Control the pump
-   //Followinf ready for function
+   //Following ready for function
    //setODSensorString("turbidostat");
    //setODSensorString("regression");
    switch (UserDefinedProtocol.turbidostatODType) {
       case 680:
          odSensorString = "od-sensors.od-680";
          break;
-      case 720:
-         odSensorString = "od-sensors.od-720";
-         break;
-      case 735:
-         odSensorString = "od-sensors.od-735";
-         break;
       default:
-         odSensorString = "od-sensors.od-680";
+         odSensorString = theAccessory.context().get("OD7XYString", "od-sensors.od-720");
    }
    switch (UserDefinedProtocol.regressionODType) {
       case 680:
          odSensorRegressionString = "od-sensors.od-680";
          break;
-      case 720:
-         odSensorRegressionString = "od-sensors.od-720";
-         break;
-      case 735:
-         odSensorRegressionString = "od-sensors.od-735";
-         break;
       default:
-         odSensorRegressionString = "od-sensors.od-680";
+         odSensorRegressionString = theAccessory.context().get("RegOD7XYString", "od-sensors.od-720");
    }
    var odSensor = theGroup.getAccessory(odSensorString);
    var odSensorRegression = theGroup.getAccessory(odSensorRegressionString);
