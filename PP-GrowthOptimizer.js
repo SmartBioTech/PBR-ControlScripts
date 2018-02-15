@@ -15,7 +15,7 @@ var UserDefinedProtocol = {
    analyzedStepsMin: 6,
    intervalOfConfidenceMax: 3.0,
    growthTrendMax: 1.5,
-   stabilizationTimeMin: 12,
+   stabilizationTimeMin: 8,
    growthRateEvalDelay: 420,
    growthRateEvalFrac: false,
    growthRateEvalDelayFrac: 50,
@@ -29,8 +29,8 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.0.5
- * @modified 8.2.2018 (JaCe)
+ * @version 3.0.6
+ * @modified 15.2.2018 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as appropriate
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -133,35 +133,37 @@ function controlParameter(parameter, values) {
 // Inicialization of the script
 if (!theAccessory.context().getInt("initialization", 0)) {
    theAccessory.context().clear();
-   switch(parameter) {
+   switch(UserDefinedProtocol.controlledParameter) {
       case "lights":
          if (theGroup.getAccessory("actinic-lights.light-Red").getProtoConfigValue()) {
-            theExperiment.addEvent("Disable red light protocol!!!");
+            theExperiment.addEvent("!!! Disable red light protocol.");
          }
          if (theGroup.getAccessory("actinic-lights.light-Blue").getProtoConfigValue()) {
-            theExperiment.addEvent("Disable red light protocol!!!");
+            theExperiment.addEvent("!!! Disable red light protocol.");
          }
          break;
       case "temperature":
          if (theGroup.getAccessory("thermo.thermo-reg").getProtoConfigValue()) {
-            theExperiment.addEvent("Disable thermoregulator protocol!!!");
+            theExperiment.addEvent("!!! Disable thermoregulator protocol.");
          }
          break;
       case "GMS":
          if (theGroup.getAccessory("gas-mixer.valve-0-reg").getProtoConfigValue()) {
-            theExperiment.addEvent("Disable GMS CO2 protocol!!!");
+            theExperiment.addEvent("!!! Disable GMS CO2 protocol.");
          }
          if (theGroup.getAccessory("gas-mixer.valve-1-reg").getProtoConfigValue()) {
-            theExperiment.addEvent("Disable GMS Air/N2 protocol!!!");
+            theExperiment.addEvent("!!! Disable GMS Air/N2 protocol.");
          }
          break;
       case "stirrer":
          if (theGroup.getAccessory("pwm.stirrer").getProtoConfigValue()) {
-            theExperiment.addEvent("Disable stirrer protocol!!!");
+            theExperiment.addEvent("!!! Disable stirrer protocol.");
          }
          break;
+      case "none":
+         break;
       default:
-         return;
+         theExperiment.addEvent("!!! Unknown parameter set for control - check controlledParameter setting.")
    }
    if (UserDefinedProtocol.turbidostatODType === 720 || 735) {
       if(theGroup.getAccessory("od-sensors.od-720") === null) {
