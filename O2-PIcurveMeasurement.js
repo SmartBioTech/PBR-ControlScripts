@@ -4,9 +4,9 @@ var UserDefinedProtocol = {
    oxygenMeasurementDuration: 150,
    respirationMeasurementDuration: 90,
    relaxationPhaseDuration: 0,
-   photosynthesisRateCurveEvalFraction: 1/2,
-   photosynthesisMeasurementPeriod: 1800,
-   respirationMeasurementSkip: 1,
+   photosynthesisRateCurveEvalFraction: 2/3,
+   photosynthesisMeasurementPeriod: 3600,
+   respirationMeasurementSkip: false,
    turbidostatSynchronization: false,
    growthStabilitySynchronization: false,
    stirrerIntensityValues: [30, 50],
@@ -20,8 +20,8 @@ var UserDefinedProtocol = {
  *
  * @script PI-Curves Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 1.1.3
- * @modified 6.11.2017 (JaCe)
+ * @version 1.1.4
+ * @modified 15.2.2018 (JaCe)
  * @notes For proper function of the script following protocols have to be disabled: "Lights", "Bubble intr. valve" and "Stirrer" 
  *
  * @param {number} oxygenMeasurementDuration [s] Duration of O2 evolution measurement
@@ -68,10 +68,10 @@ function controlLights(intensityRed, intensityBlue) {
 if (!theAccessory.context().getBool("initialization", false)) {
    theAccessory.context().clear();
    if (theGroup.getAccessory("pwm.stirrer").getProtoConfigValue()) {
-      theExperiment.addEvent("Clear stirrer protocol!!!");
+      theExperiment.addEvent("!!! Disable stirrer protocol.");
    }
    if (theGroup.getAccessory("switches.valve-0").getProtoConfigValue()) {
-      theExperiment.addEvent("Clear bubble intr. valve protocol!!!");
+      theExperiment.addEvent("!!! Disable bubble intr. valve protocol.");
    }
    theAccessory.getDataHistory().setCapacity(Math.max(UserDefinedProtocol.oxygenMeasurementDuration,  UserDefinedProtocol.respirationMeasurementDuration));
    theAccessory.context().put("rateO2Evol", []);
@@ -101,7 +101,7 @@ if (experimentDuration >= measurementTime) {
       var bubbles = theGroup.getAccessory("switches.valve-0");
       var light0 = theGroup.getAccessory("actinic-lights.light-Red");
       var light1 = theGroup.getAccessory("actinic-lights.light-Blue");
-      if (respirationMeasurementSkip && (Math.floor(experimentDuration / UserDefinedProtocol.photosynthesisMeasurementPeriod) % 2)) {
+      if (UserDefinedProtocol.respirationMeasurementSkip && (Math.floor(experimentDuration / UserDefinedProtocol.photosynthesisMeasurementPeriod) % 2)) {
          UserDefinedProtocol.respirationMeasurementDuration = 0;
       }
       if (!bubblingSuspended) {
