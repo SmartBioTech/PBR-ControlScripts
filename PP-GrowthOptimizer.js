@@ -17,7 +17,7 @@ var UserDefinedProtocol = {
   growthTrendMax: 1.5,
   stabilizationTimeMin: 8,
   growthRateEvalDelay: 420,
-  growthRateEvalFrac: 2/3,
+  growthRateEvalFrac: 2 / 3,
   growthRateEvalDelayFrac: 50,
   // -optimizer parameters
   controlledParameter: 'none',
@@ -25,13 +25,15 @@ var UserDefinedProtocol = {
   groupGMS: theGroup
 }
 
+/* global importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result:true */
+
 /**
  * OD Regulator Using External/Additional Pump
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.1.0
- * @modified 24.2.2018 (JaCe)
+ * @version 3.1.1
+ * @modified 26.2.2018 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -91,82 +93,82 @@ function controlParameter (parameter, values) {
   }
   var unit
   switch (parameter) {
-  case 'lights':
-    var light0 = theGroup.getAccessory('actinic-lights.light-Red')
-    var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
-    unit = ' uE'
-    light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) //Red
-    light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) //Blue
-    debugLogger('Lights changed.')
-    break
-  case 'temperature':
-    var thermoreg = theGroup.getAccessory('thermo.thermo-reg')
-    unit = String.fromCharCode(176) + 'C'
-    thermoreg.setRunningProtoConfig(new ProtoConfig(Number (values)))
-    debugLogger('Temperature changed.')
-    break
-  case 'GMS':
-    var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
-    var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
-    unit = ' ml/min'
-    valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])))
-    valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
-    var flowAir = valve0.getProtoConfigValue()
-    var flowCO2 = valve1.getProtoConfigValue()
-    debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 2) + ' ml/min and CO2 flow ' + round(flowCO2, 2) + ' ml/min (' + round((flowCO2 / (flowCO2 + flowAir) + 400 / 1e6) * 100, 1) + '%)')
-    break
-  case 'stirrer':
-    var stirrer = theGroup.getAccessory('pwm.stirrer')
-    unit = '%'
-    stirrer.setRunningProtoConfig(new ProtoConfig (Number(values)))
-    debugLogger('Stirrer changed.')
-    break
-  case 'ODRange':
-    theAccessory.context().put('odMinModifier', Number(values[0]) / UserDefinedProtocol.turbidostatODMin)
-    theAccessory.context().put('odMaxModifier', Number(values[1]) / UserDefinedProtocol.turbidostatODMax)
-    unit = ' AU'
-    debugLogger('Turbidostat OD range changed.')
-    break
-  default:
-    return null
+    case 'lights':
+      var light0 = theGroup.getAccessory('actinic-lights.light-Red')
+      var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
+      unit = ' uE'
+      light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
+      light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue
+      debugLogger('Lights changed.')
+      break
+    case 'temperature':
+      var thermoreg = theGroup.getAccessory('thermo.thermo-reg')
+      unit = String.fromCharCode(176) + 'C'
+      thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values)))
+      debugLogger('Temperature changed.')
+      break
+    case 'GMS':
+      var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
+      var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
+      unit = ' ml/min'
+      valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])))
+      valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
+      var flowAir = valve0.getProtoConfigValue()
+      var flowCO2 = valve1.getProtoConfigValue()
+      debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 2) + ' ml/min and CO2 flow ' + round(flowCO2, 2) + ' ml/min (' + round((flowCO2 / (flowCO2 + flowAir) + 400 / 1e6) * 100, 1) + '%)')
+      break
+    case 'stirrer':
+      var stirrer = theGroup.getAccessory('pwm.stirrer')
+      unit = '%'
+      stirrer.setRunningProtoConfig(new ProtoConfig(Number(values)))
+      debugLogger('Stirrer changed.')
+      break
+    case 'ODRange':
+      theAccessory.context().put('odMinModifier', Number(values[0]) / UserDefinedProtocol.turbidostatODMin)
+      theAccessory.context().put('odMaxModifier', Number(values[1]) / UserDefinedProtocol.turbidostatODMax)
+      unit = ' AU'
+      debugLogger('Turbidostat OD range changed.')
+      break
+    default:
+      return null
   }
   theAccessory.context().put('controlledParameterText', parameter + ' ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + ' changed to ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
 }
 // Inicialization of the script
 if (!theAccessory.context().getInt('initialization', 0)) {
-  theAccessory.context ().clear()
+  theAccessory.context().clear()
   switch (UserDefinedProtocol.controlledParameter) {
-  case 'lights':
-    if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable red light protocol.')
-    }
-    if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable red light protocol.')
-    }
-    break
-  case 'temperature':
-    if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable thermoregulator protocol.')
-    }
-    break
-  case 'GMS':
-    if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable GMS CO2 protocol.')
-    }
-    if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable GMS Air/N2 protocol.')
-    }
-    break
-  case 'stirrer':
-    if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable stirrer protocol.')
-    }
-    break
-  case 'none':
-    break
-  default:
-    theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting.')
+    case 'lights':
+      if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable red light protocol.')
+      }
+      if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable red light protocol.')
+      }
+      break
+    case 'temperature':
+      if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable thermoregulator protocol.')
+      }
+      break
+    case 'GMS':
+      if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable GMS CO2 protocol.')
+      }
+      if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable GMS Air/N2 protocol.')
+      }
+      break
+    case 'stirrer':
+      if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable stirrer protocol.')
+      }
+      break
+    case 'none':
+      break
+    default:
+      theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting.')
   }
   if (UserDefinedProtocol.turbidostatODType === 720 || 735) {
     if (theGroup.getAccessory('od-sensors.od-720') === null) {
@@ -218,22 +220,23 @@ function setODSensorString (ODType) {
  */
 function controlPump () {
   // Control the pump
-  //Following ready for function
-  //setODSensorString("turbidostat");
-  //setODSensorString("regression");
+  // Following ready for function
+  // setODSensorString("turbidostat");
+  // setODSensorString("regression");
+  var odSensorString, odSensorRegressionString
   switch (UserDefinedProtocol.turbidostatODType) {
-  case 680:
-    odSensorString = 'od-sensors.od-680'
-    break
-  default:
-    odSensorString = theAccessory.context().get('OD7XYString', 'od-sensors.od-720')
+    case 680:
+      odSensorString = 'od-sensors.od-680'
+      break
+    default:
+      odSensorString = theAccessory.context().get('OD7XYString', 'od-sensors.od-720')
   }
   switch (UserDefinedProtocol.regressionODType) {
-  case 680:
-    odSensorRegressionString = 'od-sensors.od-680'
-    break
-  default:
-    odSensorRegressionString = theAccessory.context().get('RegOD7XYString', 'od-sensors.od-720')
+    case 680:
+      odSensorRegressionString = 'od-sensors.od-680'
+      break
+    default:
+      odSensorRegressionString = theAccessory.context().get('RegOD7XYString', 'od-sensors.od-720')
   }
   var odSensor = theGroup.getAccessory(odSensorString)
   var odSensorRegression = theGroup.getAccessory(odSensorRegressionString)
@@ -241,12 +244,12 @@ function controlPump () {
     return null // pump not influenced
   }
   var odValue = odSensor.getValue()
-  var odLast = theAccessory.context ().getDouble ('odLast', 0.0)
+  var odLast = theAccessory.context().getDouble('odLast', 0.0)
   var odNoise = theAccessory.context().getInt('odNoise', 1)
   var odMinModifier = theAccessory.context().getDouble('odMinModifier', 1.0)
   var odMaxModifier = theAccessory.context().getDouble('odMaxModifier', 1.0)
   // Check for OD noise/overshots and primitive OD averaging
-  if (!Double.isNaN(odValue) && (round(odValue, 3) != round(odLast, 3))) {
+  if (!isNaN(odValue) && (round(odValue, 3) !== round(odLast, 3))) {
     if (odNoise) {
       theAccessory.context().put('odNoise', 0)
       theAccessory.context().put('odLast', odValue)
@@ -255,8 +258,7 @@ function controlPump () {
     if (pumpState || (Math.abs(1 - odValue / odLast) < 0.04)) {
       odValue = (odValue + odLast) / 2
       theAccessory.context().put('odLast', odValue)
-    }
-    else {
+    } else {
       theAccessory.context().put('odNoise', 1)
       theAccessory.context().put('odLast', odValue)
       return null
@@ -294,10 +296,19 @@ function controlPump () {
       var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (UserDefinedProtocol.growthRateEvalFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)))
       debugLogger('Growth parameters: ' + regCoefExp.join(', '))
       stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
-      theExperiment.addEvent('Doubling time of the step was ' + round(stepDoublingTime[stepCounter], 2) + ' h and step no. is ' + (++stepCounter))
+      theExperiment.addEvent('Doubling time of the step was ' + round(stepDoublingTime[stepCounter], 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%) and step no. is ' + (++stepCounter))
       theAccessory.context().put('stepCounter', stepCounter)
       if (stepCounter >= UserDefinedProtocol.analyzedStepsMin) {
-        var stepDoublingTimeAvg = 0; var stepDoublingTimeSD = 0; var stepDoublingTimeIC95 = 0; var stepTrend = 0; var sumXY = 0; var sumX = 0; var sumY = 0; var sumX2 = 0; var sumY2 = 0
+        var stepDoublingTimeAvg = 0
+        var stepDoublingTimeSD = 0
+        var stepDoublingTimeIC95 = 0
+        var stepTrend = 0
+        var stepCoD = 0
+        var sumXY = 0
+        var sumX = 0
+        var sumY = 0
+        var sumX2 = 0
+        var sumY2 = 0
         // Average of steps doubling time
         for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
           stepDoublingTimeAvg += Number(stepDoublingTime[i])
@@ -307,8 +318,8 @@ function controlPump () {
         for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
           stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
         }
-        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD/UserDefinedProtocol.analyzedStepsMin)
-        stepDoublingTimeIC95 = stepDoublingTimeSD/Math.sqrt(UserDefinedProtocol.analyzedStepsMin) * 1.96
+        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / UserDefinedProtocol.analyzedStepsMin)
+        stepDoublingTimeIC95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedStepsMin) * 1.96
         // Trend of steps doubling time
         for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
           sumX += Number(expDuration[i])
@@ -318,12 +329,13 @@ function controlPump () {
           sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
         }
         stepTrend = (UserDefinedProtocol.analyzedStepsMin * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedStepsMin * sumX2 - Math.pow(sumX, 2)) * 3600
-        theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
+        stepCoD = (UserDefinedProtocol.analyzedStepsMin * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedStepsMin * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedStepsMin * sumY2 - Math.pow(sumY, 2))))
+        theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%')
         // Growth stability test and parameters control
         if ((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) {
           theAccessory.context().put('modeStabilized', 1)
           var changeCounter = theAccessory.context().getInt('changeCounter', 0)
-          theExperiment.addEvent('*** Stabilized doubling time TD (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
+          theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
           if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
             if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
               controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
@@ -354,12 +366,12 @@ function controlPump () {
     debugLogger('Pump low speed.', 0)
     return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100 // slow down the pump
   } else {
-    return null //pump not influenced
+    return null // pump not influenced
   }
 }
 
 // Set the pump
-var pumpState = !Double.isNaN(theAccessory.getValue())
+var pumpState = !isNaN(theAccessory.getValue())
 // Check whether O2 evolution and respiration measurement mode is active
 if (theGroup.getAccessory('probes.o2').context().getInt('modeO2EvolResp', 0)) {
   if (pumpState) {
