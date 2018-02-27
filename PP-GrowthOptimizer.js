@@ -32,8 +32,8 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.1.1
- * @modified 26.2.2018 (JaCe)
+ * @version 3.1.2
+ * @modified 27.2.2018 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -141,48 +141,73 @@ if (!theAccessory.context().getInt('initialization', 0)) {
   switch (UserDefinedProtocol.controlledParameter) {
     case 'lights':
       if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable red light protocol.')
+        theExperiment.addEvent('!!! Disable red light protocol')
       }
       if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable red light protocol.')
+        theExperiment.addEvent('!!! Disable red light protocol')
       }
       break
     case 'temperature':
       if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable thermoregulator protocol.')
+        theExperiment.addEvent('!!! Disable thermoregulator protocol')
       }
       break
     case 'GMS':
       if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable GMS CO2 protocol.')
+        theExperiment.addEvent('!!! Disable GMS CO2 protocol')
       }
       if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable GMS Air/N2 protocol.')
+        theExperiment.addEvent('!!! Disable GMS Air/N2 protocol')
       }
       break
     case 'stirrer':
       if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable stirrer protocol.')
+        theExperiment.addEvent('!!! Disable stirrer protocol')
       }
       break
     case 'none':
       break
     default:
-      theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting.')
+      theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting')
   }
+  // TODO rewrite following part
   if (UserDefinedProtocol.turbidostatODType === 720 || 735) {
+    var OD7XYString
     if (theGroup.getAccessory('od-sensors.od-720') === null) {
-      theAccessory.context().put('OD7XYString', 'od-sensors.od-735')
+      OD7XYString = 'od-sensors.od-735'
+      if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+        theExperiment.addEvent('!!! OD735 measurement protocol set to wrong interval')
+      }
     } else {
-      theAccessory.context().put('OD7XYString', 'od-sensors.od-720')
+      OD7XYString = 'od-sensors.od-720'
+      if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+        theExperiment.addEvent('!!! OD720 measurement protocol set to wrong interval')
+      }
+    }
+    theAccessory.context().put('OD7XYString', OD7XYString)
+  } else {
+    if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+      theExperiment.addEvent('!!! OD680 measurement protocol set to wrong interval')
     }
   }
   if (UserDefinedProtocol.regressionODType === 720 || 735) {
+    var RegOD7XYString
     if (theGroup.getAccessory('od-sensors.od-720') === null) {
-      theAccessory.context().put('RegOD7XYString', 'od-sensors.od-735')
+      RegOD7XYString = 'od-sensors.od-735'
+      if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+        theExperiment.addEvent('!!! OD735 measurement protocol set to wrong interval')
+      }
     } else {
-      theAccessory.context().put('RegOD7XYString', 'od-sensors.od-720')
+      RegOD7XYString = 'od-sensors.od-720'
+      if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+        theExperiment.addEvent('!!! OD720 measurement protocol set to wrong interval')
+      }
     }
+    theAccessory.context().put('RegOD7XYString', RegOD7XYString)
+  } else {
+      if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+        theExperiment.addEvent('!!! OD680 measurement protocol set to wrong interval')
+      }
   }
   controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0])
   theAccessory.context().put('initialization', 1)
