@@ -2,11 +2,10 @@ var UserDefinedProtocol = {
   oxygenMeasurementInterval: 60,
   oxygenRapidMeasurementInterval: 4,
   oxygenMeasurementDuration: 150,
-  respirationMeasurementDuration: 90,
+  respirationMeasurementDuration: 120,
   relaxationPhaseDuration: 0,
   photosynthesisRateCurveEvalFraction: 2 / 3,
   photosynthesisMeasurementPeriod: 3600,
-  respirationMeasurementSkip: false,
   turbidostatSynchronization: false,
   growthStabilitySynchronization: false,
   stirrerIntensityValues: [30, 50],
@@ -104,9 +103,6 @@ if (experimentDuration >= measurementTime) {
     bubbles = theGroup.getAccessory('switches.valve-0')
     var light0 = theGroup.getAccessory('actinic-lights.light-Red')
     var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
-    if (UserDefinedProtocol.respirationMeasurementSkip && (Math.floor(experimentDuration / UserDefinedProtocol.photosynthesisMeasurementPeriod) % 2)) {
-      UserDefinedProtocol.respirationMeasurementDuration = 0
-    }
     if (!bubblingSuspended) {
       theAccessory.context().put('bubblingSuspended', 1)
       theAccessory.context().put('modeO2EvolResp', 1)
