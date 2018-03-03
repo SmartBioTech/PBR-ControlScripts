@@ -12,13 +12,12 @@ var UserDefinedProtocol = {
   // -optimizer stability check
   growthStatistics: true,
   regressionODType: 680,
-  analyzedStepsMin: 6,
+  analyzedSteps: 6,
   intervalOfConfidenceMax: 3.0,
   growthTrendMax: 1.5,
-  stabilizationTimeMin: 8,
+  stabilizationTime: 8,
   growthRateEvalDelay: 420,
   growthRateEvalFrac: 2 / 3,
-  growthRateEvalDelayFrac: 50,
   // -optimizer parameters
   controlledParameter: 'none',
   controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]],
@@ -28,45 +27,45 @@ var UserDefinedProtocol = {
 /* global importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result:true */
 
 /**
- * OD Regulator Using External/Additional Pump
- *
- * @script Peristaltic Pump - Automatic Growth Characterization
- * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.1.2
- * @modified 27.2.2018 (JaCe)
- *
- * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
- *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
- *        The controlled pump has to be set to ID 5 to allow compatibility with other scripts
- *
- * @param {number} turbidostatODMin [AU] - Minimum OD/lower bound for OD regulator/turbidostat
- * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
- * @param {number} turbidostatODType [680/720/735] - OD sensor used for turbidostat control
- * @param {number} ODReadoutInterval [s] - Defines how often is the OD measured
- * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
- * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
- * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
- * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics
- * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
- * @param {number} analyzedStepsMin [-] - Number of steps to be analyzed for stability check
- * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
- * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
- * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
- * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
- * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
- *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitaion you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
- * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
- * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
- *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
- *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
- *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
- *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
- *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
- * @param {string} groupGMS - Identifies the group that contains Gas Mixing System.
- *
- * @return Flow of external/additional pump
- *
- */
+   * OD Regulator Using External/Additional Pump
+   *
+   * @script Peristaltic Pump - Automatic Growth Characterization
+   * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
+   * @version 3.1.2
+   * @modified 27.2.2018 (JaCe)
+   *
+   * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
+   *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
+   *        The controlled pump has to be set to ID 5 to allow compatibility with other scripts
+   *
+   * @param {number} turbidostatODMin [AU] - Minimum OD/lower bound for OD regulator/turbidostat
+   * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
+   * @param {number} turbidostatODType [680/720/735] - OD sensor used for turbidostat control
+   * @param {number} ODReadoutInterval [s] - Defines how often is the OD measured
+   * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
+   * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
+   * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
+   * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics
+   * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
+   * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
+   * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
+   * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
+   * @param {number} stabilizationTime [h] - Minimum duration of each characterization step
+   * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
+   * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
+   *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitaion you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
+   * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
+   * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
+   *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
+   *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
+   *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
+   *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
+   *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
+   * @param {string} groupGMS - Identifies the group that contains Gas Mixing System.
+   *
+   * @return Flow of external/additional pump
+   *
+   */
 
 // Libraries import
 importPackage(java.util)
@@ -205,44 +204,44 @@ if (!theAccessory.context().getInt('initialization', 0)) {
     }
     theAccessory.context().put('RegOD7XYString', RegOD7XYString)
   } else {
-      if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
-        theExperiment.addEvent('!!! OD680 measurement protocol set to wrong interval')
-      }
+    if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+      theExperiment.addEvent('!!! OD680 measurement protocol set to wrong interval')
+    }
   }
   controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0])
   theAccessory.context().put('initialization', 1)
   debugLogger('Peristaltic Pump - Growth Optimizer initialization successful.')
 }
 /**
-function setODSensorString (ODType) {
-  // Set ODtype = [turbidostat, regression]
-  switch (UserDefinedProtocol[ODType+'ODType']) {
-  case 680:
-    odString = 'od-sensors.od-680'
-    break
-  case 720:
-    odString = 'od-sensors.od-720'
-    break
-  case 735:
-    odString = 'od-sensors.od-735'
-    break
-  default:
-    odString = 'od-sensors.od-680'
+  function setODSensorString (ODType) {
+    // Set ODtype = [turbidostat, regression]
+    switch (UserDefinedProtocol[ODType+'ODType']) {
+    case 680:
+      odString = 'od-sensors.od-680'
+      break
+    case 720:
+      odString = 'od-sensors.od-720'
+      break
+    case 735:
+      odString = 'od-sensors.od-735'
+      break
+    default:
+      odString = 'od-sensors.od-680'
+    }
+    switch (ODType) {
+    case 'turbidostat':
+      text = 'Sensor'
+      break
+    case 'regression':
+      text = 'SensorRegression'
+      break
+    default:
+      text = 'Sensor'
+    }
+    eval('od' + text + 'String = ' + odString)
+    debugLogger('OD sensor string set')
   }
-  switch (ODType) {
-  case 'turbidostat':
-    text = 'Sensor'
-    break
-  case 'regression':
-    text = 'SensorRegression'
-    break
-  default:
-    text = 'Sensor'
-  }
-  eval('od' + text + 'String = ' + odString)
-  debugLogger('OD sensor string set')
-}
- */
+  */
 function controlPump () {
   // Control the pump
   // Following ready for function
@@ -311,7 +310,7 @@ function controlPump () {
       theAccessory.context().put('expDuration', expDuration)
       theAccessory.context().put('stepDuration', stepDuration)
       theAccessory.context().put('stepDoublingTime', stepDoublingTime)
-      theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
+      theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTime * 3600)
       odSensorRegression.getDataHistory().setCapacity(600)
     }
     expDuration[stepCounter] = theExperiment.getDurationSec()
@@ -323,7 +322,7 @@ function controlPump () {
       stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
       theExperiment.addEvent('Doubling time of the step was ' + round(stepDoublingTime[stepCounter], 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%) and step no. is ' + (++stepCounter))
       theAccessory.context().put('stepCounter', stepCounter)
-      if (stepCounter >= UserDefinedProtocol.analyzedStepsMin) {
+      if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
         var stepDoublingTimeAvg = 0
         var stepDoublingTimeSD = 0
         var stepDoublingTimeIC95 = 0
@@ -335,26 +334,26 @@ function controlPump () {
         var sumX2 = 0
         var sumY2 = 0
         // Average of steps doubling time
-        for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
+        for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
           stepDoublingTimeAvg += Number(stepDoublingTime[i])
         }
-        stepDoublingTimeAvg /= UserDefinedProtocol.analyzedStepsMin
+        stepDoublingTimeAvg /= UserDefinedProtocol.analyzedSteps
         // IC95 of steps doubling time
-        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
+        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
           stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
         }
-        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / UserDefinedProtocol.analyzedStepsMin)
-        stepDoublingTimeIC95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedStepsMin) * 1.96
+        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / UserDefinedProtocol.analyzedSteps)
+        stepDoublingTimeIC95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps) * 1.96
         // Trend of steps doubling time
-        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedStepsMin); i--) {
+        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
           sumX += Number(expDuration[i])
           sumX2 += Math.pow(expDuration[i], 2)
           sumY += Number(stepDoublingTime[i])
           sumY2 += Math.pow(stepDoublingTime[i], 2)
           sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
         }
-        stepTrend = (UserDefinedProtocol.analyzedStepsMin * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedStepsMin * sumX2 - Math.pow(sumX, 2)) * 3600
-        stepCoD = (UserDefinedProtocol.analyzedStepsMin * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedStepsMin * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedStepsMin * sumY2 - Math.pow(sumY, 2))))
+        stepTrend = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * 3600
+        stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
         theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%')
         // Growth stability test and parameters control
         if ((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) {

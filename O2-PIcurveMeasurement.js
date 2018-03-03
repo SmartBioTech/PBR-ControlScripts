@@ -2,14 +2,13 @@ var UserDefinedProtocol = {
   oxygenMeasurementInterval: 60,
   oxygenRapidMeasurementInterval: 4,
   oxygenMeasurementDuration: 150,
-  respirationMeasurementDuration: 90,
+  respirationMeasurementDuration: 120,
   relaxationPhaseDuration: 0,
   photosynthesisRateCurveEvalFraction: 2 / 3,
   photosynthesisMeasurementPeriod: 3600,
-  respirationMeasurementSkip: false,
   turbidostatSynchronization: false,
   growthStabilitySynchronization: false,
-  stirrerIntensityValues: [30, 50],
+  stirrerIntensityValues: [30, 60],
   lightStepMultiplierValues: [ 1 ],
   lightStepMultiplierColors: ['red'],
   photosynthesisCurveLightMultiplierValues: [ 1 ]
@@ -77,7 +76,9 @@ if (!theAccessory.context().getBool('initialization', false)) {
   }
   theAccessory.getDataHistory().setCapacity(Math.max(UserDefinedProtocol.oxygenMeasurementDuration, UserDefinedProtocol.respirationMeasurementDuration))
   theAccessory.context().put('rateO2Evol', [])
+  theAccessory.context().put('rateO2EvolR2', [])
   theAccessory.context().put('rateO2Resp', [])
+  theAccessory.context().put('rateO2RespR2', [])
   theAccessory.context().put('initialization', true)
   theGroup.getAccessory('pwm.stirrer').setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.stirrerIntensityValues[0]))
   theGroup.getAccessory('switches.valve-0').setRunningProtoConfig(ProtoConfig.ON)
@@ -91,7 +92,7 @@ if (experimentDuration >= measurementTime) {
   var dilution = UserDefinedProtocol.turbidostatSynchronization ? turbidostat.context().getInt('modeDilution', 0) : 1
   var stabilized = UserDefinedProtocol.growthStabilitySynchronization ? turbidostat.context().getInt('modeStabilized', 0) : 1
   if (dilution && stabilized) {
-    var regCoefLin, rateO2Evol, rateO2Resp
+    var regCoefLin, rateO2Evol, rateO2Resp, rateO2EvolR2, rateO2RespR2
     var changeCounter = theAccessory.context().getInt('changeCounter', 0)
     var multiplierStep = theAccessory.context().getInt('multiplierStep', 0)
     var resumeTime = theAccessory.context().getInt('resumeTime', 0)
@@ -104,9 +105,6 @@ if (experimentDuration >= measurementTime) {
     bubbles = theGroup.getAccessory('switches.valve-0')
     var light0 = theGroup.getAccessory('actinic-lights.light-Red')
     var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
-    if (UserDefinedProtocol.respirationMeasurementSkip && (Math.floor(experimentDuration / UserDefinedProtocol.photosynthesisMeasurementPeriod) % 2)) {
-      UserDefinedProtocol.respirationMeasurementDuration = 0
-    }
     if (!bubblingSuspended) {
       theAccessory.context().put('bubblingSuspended', 1)
       theAccessory.context().put('modeO2EvolResp', 1)
@@ -123,7 +121,9 @@ if (experimentDuration >= measurementTime) {
       regCoefLin = theAccessory.getDataHistory().regression(ETrendFunction.LIN, Math.ceil(UserDefinedProtocol.photosynthesisRateCurveEvalFraction * UserDefinedProtocol.oxygenMeasurementDuration / UserDefinedProtocol.oxygenRapidMeasurementInterval))
       debugLogger('O2 evol. parameters: ' + regCoefLin.join(', '))
       rateO2Evol = theAccessory.context().get('rateO2Evol', [])
+      rateO2EvolR2 = theAccessory.context().get('rateO2EvolR2', [])
       rateO2Evol[changeCounter] = round(regCoefLin[1] * 600, 2)
+      rateO2EvolR2[changeCounter] = round(regCoefLin[2], 3)
       if (UserDefinedProtocol.respirationMeasurementDuration > 0) {
         light0.suspend(resumeTime)
         light1.suspend(resumeTime)
@@ -138,7 +138,9 @@ if (experimentDuration >= measurementTime) {
         regCoefLin = theAccessory.getDataHistory().regression(ETrendFunction.LIN, Math.ceil(UserDefinedProtocol.photosynthesisRateCurveEvalFraction * UserDefinedProtocol.respirationMeasurementDuration / UserDefinedProtocol.oxygenRapidMeasurementInterval))
         debugLogger('O2 resp. parameters: ' + regCoefLin.join(', '))
         rateO2Resp = theAccessory.context().get('rateO2Resp', [])
+        rateO2RespR2 = theAccessory.context().get('rateO2RespR2', [])
         rateO2Resp[changeCounter] = round(regCoefLin[1] * 600, 2)
+        rateO2RespR2[changeCounter] = round(regCoefLin[2], 3)
         controlLights(theAccessory.context().getDouble('light0Value', light0.getValue()), theAccessory.context().getDouble('light1Value', light1.getValue()))
         light0.resume(experimentDuration)
         light1.resume(experimentDuration)
@@ -152,12 +154,16 @@ if (experimentDuration >= measurementTime) {
       theAccessory.context().put('changeCounter', ++changeCounter)
       if (changeCounter >= UserDefinedProtocol.lightStepMultiplierValues.length) {
         rateO2Evol = theAccessory.context().get('rateO2Evol', [])
+        rateO2EvolR2 = theAccessory.context().get('rateO2EvolR2', [])
         rateO2Resp = theAccessory.context().get('rateO2Resp', [])
+        rateO2RespR2 = theAccessory.context().get('rateO2RespR2', [])
         theAccessory.context().put('changeCounter', 0)
         theAccessory.context().put('measurementTime', experimentDuration + UserDefinedProtocol.photosynthesisMeasurementPeriod - UserDefinedProtocol.lightStepMultiplierValues.length * (UserDefinedProtocol.oxygenMeasurementDuration + UserDefinedProtocol.respirationMeasurementDuration + UserDefinedProtocol.relaxationPhaseDuration))
-        theExperiment.addEvent('PI-curve DONE. O2 rates are ' + rateO2Evol.join(', ') + ' and ' + rateO2Resp.join(', ') + ' units/min')
+        theExperiment.addEvent('PI-curve DONE. O2 rates are ' + rateO2Evol.join(', ') + ' and ' + rateO2Resp.join(', ') + ' units/min (CoD ' + (rateO2EvolR2 * 100).join(', ') + ' and ' + rateO2RespR2.join(', ') + '%')
         theAccessory.context().put('rateO2Evol', [])
+        theAccessory.context().put('rateO2EvolR2', [])
         theAccessory.context().put('rateO2Resp', [])
+        theAccessory.context().put('rateO2RespR2', [])
         bubbles.setRunningProtoConfig(ProtoConfig.ON)
         stirrer.setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.stirrerIntensityValues[0]))
         theAccessory.context().put('modeO2EvolResp', 0)
