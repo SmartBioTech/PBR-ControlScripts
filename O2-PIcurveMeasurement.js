@@ -159,7 +159,7 @@ if (experimentDuration >= measurementTime) {
         rateO2RespR2 = theAccessory.context().get('rateO2RespR2', [])
         theAccessory.context().put('changeCounter', 0)
         theAccessory.context().put('measurementTime', experimentDuration + UserDefinedProtocol.photosynthesisMeasurementPeriod - UserDefinedProtocol.lightStepMultiplierValues.length * (UserDefinedProtocol.oxygenMeasurementDuration + UserDefinedProtocol.respirationMeasurementDuration + UserDefinedProtocol.relaxationPhaseDuration))
-        theExperiment.addEvent('PI-curve DONE. O2 rates are ' + rateO2Evol.join(', ') + ' and ' + rateO2Resp.join(', ') + ' units/min (CoD ' + (rateO2EvolR2 * 100).join(', ') + ' and ' + rateO2RespR2.join(', ') + '%')
+        theExperiment.addEvent('PI-curve DONE. O2 rates are ' + rateO2Evol.join(', ') + ' and ' + rateO2Resp.join(', ') + ' units/min (R2 ' + rateO2EvolR2.join(', ') + ' and ' + rateO2RespR2.join(', ') + ')')
         theAccessory.context().put('rateO2Evol', [])
         theAccessory.context().put('rateO2EvolR2', [])
         theAccessory.context().put('rateO2Resp', [])
