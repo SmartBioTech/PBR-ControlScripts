@@ -354,7 +354,7 @@ function controlPump () {
         }
         stepTrend = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * 3600
         stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
-        theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%')
+        theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
         // Growth stability test and parameters control
         if ((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) {
           theAccessory.context().put('modeStabilized', 1)
@@ -380,7 +380,7 @@ function controlPump () {
       }
     }
     debugLogger('Pump max speed.')
-    return theAccessory.getMax() // fast
+    return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed // fast
   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier)) && pumpState) {
     theAccessory.context().put('modeDilution', 0)
     theAccessory.context().put('lastPumpStop', theExperiment.getDurationSec())
@@ -388,7 +388,7 @@ function controlPump () {
     return ProtoConfig.OFF // pump off
   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier + ((UserDefinedProtocol.turbidostatODMax * odMaxModifier) - (UserDefinedProtocol.turbidostatODMin * odMinModifier)) * UserDefinedProtocol.peristalticPumpSlowDownRange / 100)) && pumpState) {
     debugLogger('Pump low speed.', 0)
-    return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100 // slow down the pump
+    return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100 // slow down the pump
   } else {
     return null // pump not influenced
   }
@@ -404,7 +404,7 @@ if (theGroup.getAccessory('probes.o2').context().getInt('modeO2EvolResp', 0)) {
   }
 } else if (theAccessory.context().getInt('pumpSuspended', 0)) {
   theAccessory.context().put('pumpSuspended', 0)
-  result = theAccessory.getMax()
+  result = theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed
 } else {
   result = controlPump()
 }
