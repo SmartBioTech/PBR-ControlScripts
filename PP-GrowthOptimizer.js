@@ -380,7 +380,7 @@ function controlPump () {
       }
     }
     debugLogger('Pump max speed.')
-    return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed // fast
+    return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 // fast
   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier)) && pumpState) {
     theAccessory.context().put('modeDilution', 0)
     theAccessory.context().put('lastPumpStop', theExperiment.getDurationSec())
@@ -404,7 +404,7 @@ if (theGroup.getAccessory('probes.o2').context().getInt('modeO2EvolResp', 0)) {
   }
 } else if (theAccessory.context().getInt('pumpSuspended', 0)) {
   theAccessory.context().put('pumpSuspended', 0)
-  result = theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed
+  result = theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100
 } else {
   result = controlPump()
 }
