@@ -19,8 +19,8 @@ var UserDefinedProtocol = {
  *
  * @script PI-Curves Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 1.2.0
- * @modified 25.2.2018 (JaCe)
+ * @version 1.2.1
+ * @modified 21.4.2018 (JaCe)
  * @notes For proper function of the script following protocols have to be disabled: "Lights", "Bubble intr. valve" and "Stirrer"
  *
  * @param {number} oxygenMeasurementDuration [s] Duration of O2 evolution measurement
@@ -84,6 +84,13 @@ if (!theAccessory.context().getBool('initialization', false)) {
   theGroup.getAccessory('switches.valve-0').setRunningProtoConfig(ProtoConfig.ON)
   measurementTime = experimentDuration + 600
   theAccessory.context().put('measurementTime', measurementTime)
+  var light1String
+  if (theGroup.getAccessory('actinic-lights.light-Blue') === null) {
+    light1String = 'actinic-lights.light-White'
+  } else {
+    light1String = 'actinic-lights.light-Blue'
+  }
+  theAccessory.context().put('light1String', light1String)
   debugLogger('PI-Curves Measurement - Photosynthesis Efficiency Quantification initialization successful.')
 }
 if (experimentDuration >= measurementTime) {
@@ -104,7 +111,7 @@ if (experimentDuration >= measurementTime) {
     stirrer = theGroup.getAccessory('pwm.stirrer')
     bubbles = theGroup.getAccessory('switches.valve-0')
     var light0 = theGroup.getAccessory('actinic-lights.light-Red')
-    var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
+    var light1 = theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue'))
     if (!bubblingSuspended) {
       theAccessory.context().put('bubblingSuspended', 1)
       theAccessory.context().put('modeO2EvolResp', 1)
