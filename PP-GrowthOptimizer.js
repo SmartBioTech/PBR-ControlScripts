@@ -15,7 +15,8 @@ var UserDefinedProtocol = {
   analyzedSteps: 6,
   intervalOfConfidenceMax: 3.0,
   growthTrendMax: 1.5,
-  stabilizationTime: 8,
+  stabilizationTimeMin: 8,
+  stabilizationTimeMax: 24,
   growthRateEvalDelay: 420,
   growthRateEvalFrac: 2 / 3,
   // -optimizer parameters
@@ -31,8 +32,8 @@ var UserDefinedProtocol = {
    *
    * @script Peristaltic Pump - Automatic Growth Characterization
    * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
-   * @version 3.1.2
-   * @modified 27.2.2018 (JaCe)
+   * @version 3.1.3
+   * @modified 24.4.2018 (JaCe)
    *
    * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
    *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -50,10 +51,11 @@ var UserDefinedProtocol = {
    * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
    * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
    * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
-   * @param {number} stabilizationTime [h] - Minimum duration of each characterization step
+   * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
+   * @param {number} stabilizationTimeMax [h] - Maximum duration of each characterization step
    * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
    * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
-   *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitaion you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
+   *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
    * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
    * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
    *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
@@ -304,13 +306,15 @@ function controlPump () {
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', 0.0)
     var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
+    var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
     if (!Array.isArray(expDuration)) {
       stepCounter = 0
       expDuration = []; stepDuration = []; stepDoublingTime = []
       theAccessory.context().put('expDuration', expDuration)
       theAccessory.context().put('stepDuration', stepDuration)
       theAccessory.context().put('stepDoublingTime', stepDoublingTime)
-      theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTime * 3600)
+      theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
+      theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
       odSensorRegression.getDataHistory().setCapacity(600)
     }
     expDuration[stepCounter] = theExperiment.getDurationSec()
@@ -356,7 +360,7 @@ function controlPump () {
         stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
         theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
         // Growth stability test and parameters control
-        if ((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) {
+        if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) || (stabilizedTimeMax <= Number(theExperiment.getDurationSec()))) {
           theAccessory.context().put('modeStabilized', 1)
           var changeCounter = theAccessory.context().getInt('changeCounter', 0)
           theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
@@ -375,6 +379,7 @@ function controlPump () {
             theAccessory.context().remove('expDuration')
             theAccessory.context().remove('stepDoublingTime')
             theAccessory.context().remove('stabilizedTime')
+            theAccessory.context().remove('stabilizedTimeMax')
           }
         }
       }
