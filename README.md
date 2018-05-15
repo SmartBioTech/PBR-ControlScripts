@@ -1,5 +1,5 @@
 # PBR-Scripts
-Set of Control Scripts for PSI Bioreactor Client software developed in Department of Adaptive Biotechnologies. These scripts allow automatization of both basic and advanced funcionalities not available in standard distribution of the client software. 
+A set of Control Scripts for PSI Bioreactor Client software developed in Department of Adaptive Biotechnologies. These scripts allow automatization of both basic and advanced funcionalities not available in standard distribution of the client software. 
 
 ## Getting Started
 
