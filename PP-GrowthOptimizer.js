@@ -46,7 +46,7 @@ var UserDefinedProtocol = {
    * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
    * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
    * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
-   * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics
+   * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
    * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
    * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
    * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
