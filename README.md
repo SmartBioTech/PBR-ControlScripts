@@ -44,7 +44,7 @@ turbidostatSynchronization: true
 growthStabilitySynchronization: true
 lightStepMultiplierValues: [ 1 ]
 ```
-Here it's necessary to run PP-GrowthOptimizer script at the same time with enabled growth statistics
+Here it's necessary to run PP-GrowthOptimizer script with enabled growth statistics
 ```
 growthStatistics: true
 ```
