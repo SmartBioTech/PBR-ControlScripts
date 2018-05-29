@@ -14,6 +14,10 @@ var UserDefinedProtocol = {
   photosynthesisCurveLightMultiplierValues: [ 1 ]
 }
 
+/* globals
+  importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result:true
+*/
+
 /**
  * PI-Curves Measurement
  *
@@ -40,8 +44,6 @@ var UserDefinedProtocol = {
  * @return dO2 readout period
  *
  */
-
-/* global importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result:true */
 
 // Libraries to import
 importPackage(java.util)
