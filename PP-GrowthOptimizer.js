@@ -4,73 +4,71 @@ var UserDefinedProtocol = {
   turbidostatODMax: 0.425,
   turbidostatODType: 720,
   ODReadoutInterval: 60,
-  // -optimizer parameters
-  controlledParameter: 'none',
-  controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]],
-  // -optimizer stability check
-  growthStatistics: true,
-  regressionODType: 680,
-  stabilizationTimeMin: 8,
-  stabilizationTimeMax: 24,
-  growthRateEvalFrac: 2 / 3,
-  analyzedSteps: 6,
-  intervalOfConfidenceMax: 3.0,
-  growthTrendMax: 1.5,
   // -peristaltic pump settings
   peristalticPumpID: 5,
   peristalticPumpSpeed: 100,
   peristalticPumpSlowDownRange: 25,
   peristalticPumpSlowDownFactor: 75,
-  // -advanced options
+  // -optimizer stability check
+  growthStatistics: true,
+  regressionODType: 680,
+  analyzedSteps: 6,
+  intervalOfConfidenceMax: 3.0,
+  growthTrendMax: 1.5,
+  stabilizationTimeMin: 8,
+  stabilizationTimeMax: 24,
   growthRateEvalDelay: 420,
+  growthRateEvalFrac: 2 / 3,
+  // -optimizer parameters
+  controlledParameter: 'none',
+  controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]],
   groupGMS: theGroup
 }
 
-/* globals
-  importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result:true
-*/
+/* global importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result:true */
 
 /**
- * OD Regulator Using External/Additional Pump
- *
- * @script Peristaltic Pump - Automatic Growth Characterization
- * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.1.3
- * @modified 24.4.2018 (JaCe)
- *
- * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
- *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
- *        The controlled pump has to be set to ID 5 to allow compatibility with other scripts
- *
- * @param {number} turbidostatODMin [AU] - Minimum OD/lower bound for OD regulator/turbidostat
- * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
- * @param {number} turbidostatODType [680/720/735] - OD sensor used for turbidostat control
- * @param {number} ODReadoutInterval [s] - Defines how often is the OD measured
- * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
- * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
- * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
- * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
- * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
- * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
- * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
- * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
- * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
- * @param {number} stabilizationTimeMax [h] - Maximum duration of each characterization step
- * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
- * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
- *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
- * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
- * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
- *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
- *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
- *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
- *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
- *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
- * @param {string} groupGMS - Identifies the group that contains Gas Mixing System.
- *
- * @return Flow of external/additional pump
- *
- */
+   * OD Regulator Using External/Additional Pump
+   *
+   * @script Peristaltic Pump - Automatic Growth Characterization
+   * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
+   * @version 3.1.3
+   * @modified 24.4.2018 (JaCe)
+   *
+   * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
+   *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
+   *        The controlled pump has to be set to ID 5 to allow compatibility with other scripts
+   *
+   * @param {number} turbidostatODMin [AU] - Minimum OD/lower bound for OD regulator/turbidostat
+   * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
+   * @param {number} turbidostatODType [680/720/735] - OD sensor used for turbidostat control
+   * @param {number} ODReadoutInterval [s] - Defines how often is the OD measured
+   * @param {number} peristalticPumpID [3-7] - Defines peristaltic pump ID set to the pump used for fresh media supply (quasi-continuous mode)
+   * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
+   * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
+   * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
+   * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
+   * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
+   * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
+   * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
+   * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
+   * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
+   * @param {number} stabilizationTimeMax [h] - Maximum duration of each characterization step
+   * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
+   * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
+   *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
+   * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
+   * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
+   *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
+   *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
+   *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
+   *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
+   *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
+   * @param {string} groupGMS - Identifies the group that contains Gas Mixing System.
+   *
+   * @return Flow of external/additional pump
+   *
+   */
 
 // Libraries import
 importPackage(java.util)
@@ -97,44 +95,44 @@ function controlParameter (parameter, values) {
   }
   var unit
   switch (parameter) {
-  case 'lights':
-    var light0 = theGroup.getAccessory('actinic-lights.light-Red')
-    var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
-    unit = ' uE'
-    light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
-    light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue
-    debugLogger('Lights changed.')
-    break
-  case 'temperature':
-    var thermoreg = theGroup.getAccessory('thermo.thermo-reg')
-    unit = String.fromCharCode(176) + 'C'
-    thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values)))
-    debugLogger('Temperature changed.')
-    break
-  case 'GMS':
-    var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
-    var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
-    unit = ' ml/min'
-    valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])))
-    valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
-    var flowAir = valve0.getProtoConfigValue()
-    var flowCO2 = valve1.getProtoConfigValue()
-    debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 2) + ' ml/min and CO2 flow ' + round(flowCO2, 2) + ' ml/min (' + round((flowCO2 / (flowCO2 + flowAir) + 400 / 1e6) * 100, 1) + '%)')
-    break
-  case 'stirrer':
-    var stirrer = theGroup.getAccessory('pwm.stirrer')
-    unit = '%'
-    stirrer.setRunningProtoConfig(new ProtoConfig(Number(values)))
-    debugLogger('Stirrer changed.')
-    break
-  case 'ODRange':
-    theAccessory.context().put('odMinModifier', Number(values[0]) / UserDefinedProtocol.turbidostatODMin)
-    theAccessory.context().put('odMaxModifier', Number(values[1]) / UserDefinedProtocol.turbidostatODMax)
-    unit = ' AU'
-    debugLogger('Turbidostat OD range changed.')
-    break
-  default:
-    return null
+    case 'lights':
+      var light0 = theGroup.getAccessory('actinic-lights.light-Red')
+      var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
+      unit = ' uE'
+      light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
+      light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue
+      debugLogger('Lights changed.')
+      break
+    case 'temperature':
+      var thermoreg = theGroup.getAccessory('thermo.thermo-reg')
+      unit = String.fromCharCode(176) + 'C'
+      thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values)))
+      debugLogger('Temperature changed.')
+      break
+    case 'GMS':
+      var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
+      var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
+      unit = ' ml/min'
+      valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])))
+      valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
+      var flowAir = valve0.getProtoConfigValue()
+      var flowCO2 = valve1.getProtoConfigValue()
+      debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 2) + ' ml/min and CO2 flow ' + round(flowCO2, 2) + ' ml/min (' + round((flowCO2 / (flowCO2 + flowAir) + 400 / 1e6) * 100, 1) + '%)')
+      break
+    case 'stirrer':
+      var stirrer = theGroup.getAccessory('pwm.stirrer')
+      unit = '%'
+      stirrer.setRunningProtoConfig(new ProtoConfig(Number(values)))
+      debugLogger('Stirrer changed.')
+      break
+    case 'ODRange':
+      theAccessory.context().put('odMinModifier', Number(values[0]) / UserDefinedProtocol.turbidostatODMin)
+      theAccessory.context().put('odMaxModifier', Number(values[1]) / UserDefinedProtocol.turbidostatODMax)
+      unit = ' AU'
+      debugLogger('Turbidostat OD range changed.')
+      break
+    default:
+      return null
   }
   theAccessory.context().put('controlledParameterText', parameter + ' ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + ' changed to ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
@@ -143,38 +141,36 @@ function controlParameter (parameter, values) {
 if (!theAccessory.context().getInt('initialization', 0)) {
   theAccessory.context().clear()
   switch (UserDefinedProtocol.controlledParameter) {
-  case 'lights':
-    if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable red light protocol')
-    }
-    if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable red light protocol')
-    }
-    break
-  case 'temperature':
-    if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable thermoregulator protocol')
-    }
-    break
-  case 'GMS':
-    if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable GMS CO2 protocol')
-    }
-    if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable GMS Air/N2 protocol')
-    }
-    break
-  case 'stirrer':
-    if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable stirrer protocol')
-    }
-    break
-  case 'ODRange':
-    break
-  case 'none':
-    break
-  default:
-    theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting')
+    case 'lights':
+      if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable red light protocol')
+      }
+      if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable red light protocol')
+      }
+      break
+    case 'temperature':
+      if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable thermoregulator protocol')
+      }
+      break
+    case 'GMS':
+      if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable GMS CO2 protocol')
+      }
+      if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable GMS Air/N2 protocol')
+      }
+      break
+    case 'stirrer':
+      if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable stirrer protocol')
+      }
+      break
+    case 'none':
+      break
+    default:
+      theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting')
   }
   // TODO rewrite following part
   if (UserDefinedProtocol.turbidostatODType === 720 || 735) {
@@ -256,18 +252,18 @@ function controlPump () {
   // setODSensorString("regression");
   var odSensorString, odSensorRegressionString
   switch (UserDefinedProtocol.turbidostatODType) {
-  case 680:
-    odSensorString = 'od-sensors.od-680'
-    break
-  default:
-    odSensorString = theAccessory.context().get('OD7XYString', 'od-sensors.od-720')
+    case 680:
+      odSensorString = 'od-sensors.od-680'
+      break
+    default:
+      odSensorString = theAccessory.context().get('OD7XYString', 'od-sensors.od-720')
   }
   switch (UserDefinedProtocol.regressionODType) {
-  case 680:
-    odSensorRegressionString = 'od-sensors.od-680'
-    break
-  default:
-    odSensorRegressionString = theAccessory.context().get('RegOD7XYString', 'od-sensors.od-720')
+    case 680:
+      odSensorRegressionString = 'od-sensors.od-680'
+      break
+    default:
+      odSensorRegressionString = theAccessory.context().get('RegOD7XYString', 'od-sensors.od-720')
   }
   var odSensor = theGroup.getAccessory(odSensorString)
   var odSensorRegression = theGroup.getAccessory(odSensorRegressionString)
@@ -279,7 +275,7 @@ function controlPump () {
   var odNoise = theAccessory.context().getInt('odNoise', 1)
   var odMinModifier = theAccessory.context().getDouble('odMinModifier', 1.0)
   var odMaxModifier = theAccessory.context().getDouble('odMaxModifier', 1.0)
-  // Check for OD noise/overshots and primitive OD averaging
+  // Check for OD noise/overshots and do primitive OD averaging
   if (!isNaN(odValue) && (round(odValue, 3) !== round(odLast, 3))) {
     if (odNoise) {
       theAccessory.context().put('odNoise', 0)
@@ -336,6 +332,7 @@ function controlPump () {
         var stepDoublingTimeSD = 0
         var stepDoublingTimeIC95 = 0
         var stepTrend = 0
+        var stepCoD = 0
         var sumXY = 0
         var sumX = 0
         var sumY = 0
