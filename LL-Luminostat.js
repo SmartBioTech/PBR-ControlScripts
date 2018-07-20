@@ -1,26 +1,32 @@
+// static parameters
+var odLinMin = 0.5
+var odLinMax = 1.23
+var lightMin = 400
+var expRegMult = 281.9177
+var expRegExpo = 1.016269
+
 /**
 * Luminostat regulator
 *
 * @script Lights - Luminostat
 * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
-* @version 0.1
-* @modified 16.2.2017 (JaCe)
+* @version 0.1.1
+* @modified 11.7.2018 (JaCe)
 *
 * @notes For proper function of the script a pump has to be set to ID 4
 *
-* @param {number} pHmin Min pH/lower bound for pH stat (base) activation
+* @param {number} odLinMin Min OD for linear regulated range
+* @param {number} odLinMax Max OD for linear regulated range
+* @param {number} lightMin Min light for linear regulated range
+* @param {number} expRegMult Exponential regression multiplier
+* @param {number} expRegExpo Exponential regression exponent
 *
-* @return Flow of external/additional pump
+* @return Light intensity
 *
 */
 
-// static parameters
-var odMin = 0.5
-var odMax = 1.23
-var lightMin = 400
-var lightMax = lightMin * (1 + (odMax - odMin) / odMin)
-var expMult = 281.9177
-var expExpo = 1.016269
+// dynamic parameters
+var lightMax = lightMin * (1 + (odLinMax - odLinMin) / odLinMin)
 
 importPackage(java.util)
 importPackage(java.lang)
@@ -41,10 +47,10 @@ function controlLight(odValue) {
     if (Math.abs(1 - odValue / odLast) < 0.04) {
         odValue = (odValue + odLast) / 2
         theAccessory.context().put('odLast', odValue)
-        if (odValue > odMax) {
-            result = Math.min(expMult * Math.exp(expExpo * odValue), theAccessory.getMax());
-        } else if (odValue > odMin) {
-            result = Math.min(lightMin + (lightMax - lightMin) * (odValue - odMin) / (odMax - odMin), theAccessory.getMax());
+        if (odValue > odLinMax) {
+            result = Math.min(expRegMult * Math.exp(expRegExpo * odValue), theAccessory.getMax());
+        } else if (odValue > odLinMin) {
+            result = Math.min(lightMin + (lightMax - lightMin) * (odValue - odLinMin) / (odLinMax - odLinMin), theAccessory.getMax());
         } else {
             result = theAccessory.getValue();
         }
