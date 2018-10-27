@@ -8,14 +8,14 @@ var UserDefinedProtocol = {
   photosynthesisMeasurementPeriod: 3600,
   turbidostatSynchronization: false,
   growthStabilitySynchronization: false,
-  stirrerIntensityValues: [30, 60],
+  stirrerIntensityValues: [50, 75],
   lightStepMultiplierValues: [ 1 ],
   lightStepMultiplierColors: ['red'],
   photosynthesisCurveLightMultiplierValues: [ 1 ]
 }
 
 /* globals
-  importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result:true
+  importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result: true
 */
 
 /**
@@ -24,7 +24,7 @@ var UserDefinedProtocol = {
  * @script PI-Curves Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @version 1.2.2
- * @modified 25.10.2018 (JaCe)
+ * @modified 26.10.2018 (JaCe)
  * @notes For proper function of the script following protocols have to be disabled: "Lights", "Bubble intr. valve" and "Stirrer"
  *
  * @param {number} oxygenMeasurementDuration [s] Duration of O2 evolution measurement
