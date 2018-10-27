@@ -10,7 +10,6 @@ var UserDefinedProtocol = {
   // -optimizer stability check
   growthStatistics: true,
   regressionODType: 680,
-  regressionCoDMin: 0.8,
   stabilizationTimeMin: 8,
   stabilizationTimeMax: 24,
   growthRateEvalFrac: 2 / 3,
@@ -143,14 +142,13 @@ function controlParameter (parameter, values) {
 // Inicialization of the script
 if (!theAccessory.context().getInt('initialization', 0)) {
   theAccessory.context().clear()
-  theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
   switch (UserDefinedProtocol.controlledParameter) {
   case 'lights':
     if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
       theExperiment.addEvent('!!! Disable red light protocol')
     }
     if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
-      theExperiment.addEvent('!!! Disable blue light protocol')
+      theExperiment.addEvent('!!! Disable red light protocol')
     }
     break
   case 'temperature':
@@ -304,30 +302,8 @@ function controlPump () {
     UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
     debugLogger('OD range reversed.', 0)
   }
-  var changeCounter 
-  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec())) {
-    theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
-    changeCounter = theAccessory.context().getInt('changeCounter', 0)
-    if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-      if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
-        theAccessory.context().put('changeCounter', changeCounter)
-      } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)])
-        theAccessory.context().put('changeCounter', changeCounter)
-      } else {
-        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
-        theAccessory.context().put('changeCounter', 1)
-      }
-      theAccessory.context().remove('stepCounter')
-      theAccessory.context().remove('expDuration')
-      theAccessory.context().remove('stepDoublingTime')
-      theAccessory.context().remove('stabilizedTime')
-      theAccessory.context().remove('stabilizedTimeMax')
-    }
-  }
   // Start step growth rate evaluation
-  if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
+  if ((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState) {
     theAccessory.context().put('modeDilution', 1)
     theAccessory.context().put('modeStabilized', 0)
     var stepCounter = theAccessory.context().getInt('stepCounter', 0)
@@ -335,6 +311,7 @@ function controlPump () {
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', 0.0)
     var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
+    var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
     if (!Array.isArray(expDuration)) {
       stepCounter = 0
       expDuration = []; stepDuration = []; stepDoublingTime = []
@@ -351,17 +328,14 @@ function controlPump () {
       var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60
       var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (UserDefinedProtocol.growthRateEvalFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)))
       debugLogger('Growth parameters: ' + regCoefExp.join(', '))
-      if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin) {
-        stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
-        theAccessory.context().put('stepCounter', ++stepCounter)
-      }
-      theExperiment.addEvent('Doubling time of the step was ' + round((1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2, 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%)')
+      stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
+      theExperiment.addEvent('Doubling time of the step was ' + round(stepDoublingTime[stepCounter], 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%) and step no. is ' + (++stepCounter))
+      theAccessory.context().put('stepCounter', stepCounter)
       if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
         var stepDoublingTimeAvg = 0
         var stepDoublingTimeSD = 0
         var stepDoublingTimeIC95 = 0
         var stepTrend = 0
-        var stepCoD = 0
         var sumXY = 0
         var sumX = 0
         var sumY = 0
@@ -390,9 +364,9 @@ function controlPump () {
         stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
         theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
         // Growth stability test and parameters control
-        if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
+        if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec()))) || (stabilizedTimeMax <= Number(theExperiment.getDurationSec()))) {
           theAccessory.context().put('modeStabilized', 1)
-          changeCounter = theAccessory.context().getInt('changeCounter', 0)
+          var changeCounter = theAccessory.context().getInt('changeCounter', 0)
           theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
           if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
             if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
