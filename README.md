@@ -84,5 +84,4 @@ Projects supporting development:
 
 * Services and access to state-of-the-art facilities for systems biology across Europe; project „Center for Systems Biology ([C4Sys](http://c4sys.cz))“
 * Innovations for mitigation of global change impacts; project „[CzechGlobe 2020](http://www.czechglobe.cz/en/) – Development of the Centre of Global Climate Change Impacts Studies“
-* Investigation on dynamics of complex reaction networks in enzyme reactors and photobioreactorsproject
-* Investigation on constrained analysis of reaction networks as a tool for experimental validation of models of biochemical and photobiological reactors
+* Analysis of reaction networks with limiting conditions as a tool for the experimental validation of biochemical and photobiological reactor models; Czech Science Foundation
