@@ -97,7 +97,7 @@ function controlParameter (parameter, values) {
   switch (parameter) {
     case 'lights':
       var light0 = theGroup.getAccessory('actinic-lights.light-Red')
-      var light1 = theGroup.getAccessory('actinic-lights.light-Blue')
+      var light1 = theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue'))
       unit = ' uE'
       light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
       light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue
@@ -140,13 +140,20 @@ function controlParameter (parameter, values) {
 // Inicialization of the script
 if (!theAccessory.context().getInt('initialization', 0)) {
   theAccessory.context().clear()
+  var light1String
+  if (theGroup.getAccessory('actinic-lights.light-Blue') === null) {
+    light1String = 'actinic-lights.light-White'
+  } else {
+    light1String = 'actinic-lights.light-Blue'
+  }
+  theAccessory.context().put('light1String', light1String)
   switch (UserDefinedProtocol.controlledParameter) {
     case 'lights':
       if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
         theExperiment.addEvent('!!! Disable red light protocol')
       }
-      if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable red light protocol')
+      if (theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue')).getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable blue/white light protocol')
       }
       break
     case 'temperature':
