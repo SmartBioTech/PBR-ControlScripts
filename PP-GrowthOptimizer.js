@@ -32,8 +32,8 @@ var UserDefinedProtocol = {
    *
    * @script Peristaltic Pump - Automatic Growth Characterization
    * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
-   * @version 3.1.3
-   * @modified 24.4.2018 (JaCe)
+   * @version 3.1.4
+   * @modified 30.10.2018 (JaCe)
    *
    * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
    *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -60,10 +60,10 @@ var UserDefinedProtocol = {
    * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
    * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
    *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
-   *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
-   *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
+   *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [RED, BLUE or WHITE; uE]
+   *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [AIR , CO2; ml/min]
    *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
-   *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
+   *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [MIN, MAX; AU]
    * @param {string} groupGMS - Identifies the group that contains Gas Mixing System.
    *
    * @return Flow of external/additional pump
@@ -100,7 +100,7 @@ function controlParameter (parameter, values) {
       var light1 = theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue'))
       unit = ' uE'
       light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
-      light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue
+      light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue || White
       debugLogger('Lights changed.')
       break
     case 'temperature':
