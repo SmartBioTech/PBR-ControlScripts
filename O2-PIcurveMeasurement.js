@@ -123,7 +123,7 @@ if (experimentDuration >= measurementTime) {
       theAccessory.context().put('light1Value', light1.getValue())
       bubbles.setRunningProtoConfig(ProtoConfig.OFF)
       stirrer.setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.stirrerIntensityValues[1]))
-      controlLights(light0.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter] * UserDefinedProtocol.photosynthesisCurveLightMultiplierValues[multiplierStep], light1.getValue())
+      controlLights(light0.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter] * UserDefinedProtocol.photosynthesisCurveLightMultiplierValues[multiplierStep], light1.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter])
     }
     if ((experimentDuration > (resumeTime - UserDefinedProtocol.respirationMeasurementDuration)) && !photosynthesis) {
       theAccessory.context().put('photosynthesis', 1)
