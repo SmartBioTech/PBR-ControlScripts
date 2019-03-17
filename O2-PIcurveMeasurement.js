@@ -23,8 +23,8 @@ var UserDefinedProtocol = {
  *
  * @script PI-Curves Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 1.2.2
- * @modified 26.10.2018 (JaCe)
+ * @version 1.2.3
+ * @modified 16.3.2019 (JaCe)
  * @notes For proper function of the script following protocols have to be disabled: "Lights", "Bubble intr. valve" and "Stirrer"
  *
  * @param {number} oxygenMeasurementDuration [s] Duration of O2 evolution measurement
@@ -123,7 +123,7 @@ if (experimentDuration >= measurementTime) {
       theAccessory.context().put('light1Value', light1.getValue())
       bubbles.setRunningProtoConfig(ProtoConfig.OFF)
       stirrer.setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.stirrerIntensityValues[1]))
-      controlLights(light0.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter] * UserDefinedProtocol.photosynthesisCurveLightMultiplierValues[multiplierStep], light1.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter])
+      controlLights(light0.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter] * UserDefinedProtocol.photosynthesisCurveLightMultiplierValues[multiplierStep], light1.getValue() * UserDefinedProtocol.lightStepMultiplierValues[changeCounter] * UserDefinedProtocol.photosynthesisCurveLightMultiplierValues[multiplierStep])
     }
     if ((experimentDuration > (resumeTime - UserDefinedProtocol.respirationMeasurementDuration)) && !photosynthesis) {
       theAccessory.context().put('photosynthesis', 1)
