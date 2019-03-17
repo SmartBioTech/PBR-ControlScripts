@@ -32,7 +32,6 @@ var UserDefinedProtocol = {
 */
 
 /**
-<<<<<<< HEAD
  * OD Regulator Using External/Additional Pump
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
