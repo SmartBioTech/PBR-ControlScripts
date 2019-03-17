@@ -32,13 +32,12 @@ var UserDefinedProtocol = {
 */
 
 /**
-<<<<<<< HEAD
  * OD Regulator Using External/Additional Pump
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.1.3
- * @modified 24.4.2018 (JaCe)
+ * @version 3.1.4
+ * @modified 16.3.2019 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
