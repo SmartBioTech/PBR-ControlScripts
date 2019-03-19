@@ -314,10 +314,9 @@ function controlPump () {
     UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
     debugLogger('OD range reversed.', 0)
   }
-  var changeCounter
-  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec())) {
+  var changeCounter = theAccessory.context().getInt('changeCounter', 0)
+  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (changeCounter !== 0)) {
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
-    changeCounter = theAccessory.context().getInt('changeCounter', 0)
     if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
       if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
         controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
@@ -403,7 +402,7 @@ function controlPump () {
         // Growth stability test and parameters control
         if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
           theAccessory.context().put('modeStabilized', 1)
-          changeCounter = theAccessory.context().getInt('changeCounter', 0)
+          // changeCounter = theAccessory.context().getInt('changeCounter', 0)
           theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
           if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
             if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
