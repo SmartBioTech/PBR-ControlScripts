@@ -10,12 +10,12 @@ var UserDefinedProtocol = {
   // -optimizer stability check
   growthStatistics: true,
   regressionODType: 680,
-  regressionCoDMin: 0.8,
-  stabilizationTimeMin: 8,
-  stabilizationTimeMax: 24,
+  regressionCoDMin: 0.75,
+  stabilizationTimeMin: 12,
+  stabilizationTimeMax: 36,
   growthRateEvalFrac: 2 / 3,
   analyzedSteps: 6,
-  intervalOfConfidenceMax: 3.0,
+  intervalOfConfidenceMax: 3.5,
   growthTrendMax: 1.5,
   // -peristaltic pump settings
   peristalticPumpID: 5,
@@ -36,8 +36,8 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.1.4
- * @modified 16.3.2019 (JaCe)
+ * @version 3.1.5
+ * @modified 25.3.2019 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -155,17 +155,19 @@ if (!theAccessory.context().getInt('initialization', 0)) {
   switch (UserDefinedProtocol.controlledParameter) {
     case 'lights':
       if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable red light protocol')
+        theExperiment.addEvent('!!! Disable RED LIGHT protocol')
       }
-      if (theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue')).getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable blue light protocol')
-      } else {
-        theExperiment.addEvent('!!! Disable white light protocol')
+      if (light1String === 'actinic-lights.light-Blue') {
+        if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+          theExperiment.addEvent('!!! Disable BLUE LIGHT protocol')
+        }
+      } else if (theGroup.getAccessory('actinic-lights.light-White').getProtoConfigValue()) {
+        theExperiment.addEvent('!!! Disable WHITE LIGHT protocol')
       }
       break
     case 'temperature':
       if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable thermoregulator protocol')
+        theExperiment.addEvent('!!! Disable THERMOREGULATOR protocol')
       }
       break
     case 'GMS':
@@ -178,7 +180,7 @@ if (!theAccessory.context().getInt('initialization', 0)) {
       break
     case 'stirrer':
       if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
-        theExperiment.addEvent('!!! Disable stirrer protocol')
+        theExperiment.addEvent('!!! Disable STIRRER protocol')
       }
       break
     case 'ODRange':
