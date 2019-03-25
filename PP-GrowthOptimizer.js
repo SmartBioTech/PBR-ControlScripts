@@ -43,10 +43,12 @@ var UserDefinedProtocol = {
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
  *        The controlled pump has to be set to ID 5 to allow compatibility with other scripts
  *
+ * -turbidostat settings
  * @param {number} turbidostatODMin [AU] - Minimum OD/lower bound for OD regulator/turbidostat
  * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
  * @param {number} turbidostatODType [680/720/735] - OD sensor used for turbidostat control
  * @param {number} ODReadoutInterval [s] - Defines how often is the OD measured
+ * -optimizer parameters
  * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
  * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
  *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
@@ -54,6 +56,7 @@ var UserDefinedProtocol = {
  *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
  *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
  *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
+ * -optimizer stability check
  * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
  * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
  * @param {number} regressionCoDMin [%] - Minimum accpeted coefficient of determination for staility check evaluation (values below are ignored)
@@ -63,13 +66,15 @@ var UserDefinedProtocol = {
  * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
  * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
  * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
+ * -peristaltic pump settings
  * @param {number} peristalticPumpID [3-7] - Defines peristaltic pump ID set to the pump that is used for fresh media supply (quasi-continuous mode)
  * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
  * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
  * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
+ * -advanced options
  * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
  *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
- * @param {string} groupGMS - Identifies the group that contains Gas Mixing System.
+ * @param {string} groupGMS - Identifies the group that contains Gas Mixing System. System value - do not change unless sure what you are doing!
  *
  * @return Flow of external/additional pump
  *
