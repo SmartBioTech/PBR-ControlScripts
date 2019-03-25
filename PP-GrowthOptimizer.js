@@ -10,13 +10,13 @@ var UserDefinedProtocol = {
   // -optimizer stability check
   growthStatistics: true,
   regressionODType: 680,
-  regressionCoDMin: 0.75,
+  regressionCoDMin: 75,
   stabilizationTimeMin: 12,
   stabilizationTimeMax: 36,
   growthRateEvalFrac: 2 / 3,
   analyzedSteps: 6,
-  intervalOfConfidenceMax: 3.5,
   growthTrendMax: 1.5,
+  intervalOfConfidenceMax: 3.5,
   // -peristaltic pump settings
   peristalticPumpID: 5,
   peristalticPumpSpeed: 100,
@@ -47,20 +47,6 @@ var UserDefinedProtocol = {
  * @param {number} turbidostatODMax [AU] - Maximum OD/upper bound for OD regulator/turbidostat
  * @param {number} turbidostatODType [680/720/735] - OD sensor used for turbidostat control
  * @param {number} ODReadoutInterval [s] - Defines how often is the OD measured
- * @param {number} peristalticPumpID [3-7] - Defines peristaltic pump ID set to the pump used for fresh media supply (quasi-continuous mode)
- * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
- * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
- * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
- * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
- * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
- * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
- * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
- * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
- * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
- * @param {number} stabilizationTimeMax [h] - Maximum duration of each characterization step
- * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
- * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
- *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
  * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
  * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
  *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
@@ -68,6 +54,21 @@ var UserDefinedProtocol = {
  *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
  *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
  *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
+ * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
+ * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
+ * @param {number} regressionCoDMin [%] - Minimum accpeted coefficient of determination for staility check evaluation (values below are ignored)
+ * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
+ * @param {number} stabilizationTimeMax [h] - Maximum duration of each characterization step
+ * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
+ * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
+ * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
+ * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
+ * @param {number} peristalticPumpID [3-7] - Defines peristaltic pump ID set to the pump that is used for fresh media supply (quasi-continuous mode)
+ * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
+ * @param {number} peristalticPumpSlowDownRange [%] - Lower range where the pump slows down
+ * @param {number} peristalticPumpSlowDownFactor [%] - Slow down factor for the pump
+ * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
+ *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
  * @param {string} groupGMS - Identifies the group that contains Gas Mixing System.
  *
  * @return Flow of external/additional pump
@@ -265,7 +266,7 @@ if (!theAccessory.context().getInt('initialization', 0)) {
   */
 function controlPump () {
   // Control the pump
-  // Following ready for function
+  // Following code ready for functional implementation
   // setODSensorString("turbidostat");
   // setODSensorString("regression");
   var odSensorString, odSensorRegressionString
@@ -346,7 +347,7 @@ function controlPump () {
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', 0.0)
     var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
-    var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
+    // var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
     if (!Array.isArray(expDuration)) {
       stepCounter = 0
       expDuration = []; stepDuration = []; stepDoublingTime = []
@@ -363,7 +364,7 @@ function controlPump () {
       var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60
       var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (UserDefinedProtocol.growthRateEvalFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)))
       debugLogger('Growth parameters: ' + regCoefExp.join(', '))
-      if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin) {
+      if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin * 100) {
         stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
         theAccessory.context().put('stepCounter', ++stepCounter)
       }
@@ -373,12 +374,12 @@ function controlPump () {
         var stepDoublingTimeSD = 0
         var stepDoublingTimeIC95 = 0
         var stepTrend = 0
-        var stepCoD = 0
+        // var stepCoD = 0
         var sumXY = 0
         var sumX = 0
         var sumY = 0
         var sumX2 = 0
-        var sumY2 = 0
+        // var sumY2 = 0
         // Average of steps doubling time
         for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
           stepDoublingTimeAvg += Number(stepDoublingTime[i])
@@ -395,11 +396,11 @@ function controlPump () {
           sumX += Number(expDuration[i])
           sumX2 += Math.pow(expDuration[i], 2)
           sumY += Number(stepDoublingTime[i])
-          sumY2 += Math.pow(stepDoublingTime[i], 2)
+          // sumY2 += Math.pow(stepDoublingTime[i], 2)
           sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
         }
         stepTrend = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * 3600
-        stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
+        // stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
         theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
         // Growth stability test and parameters control
         if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
