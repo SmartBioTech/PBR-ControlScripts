@@ -369,7 +369,7 @@ function controlPump () {
       var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60
       var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (UserDefinedProtocol.growthRateEvalFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)))
       debugLogger('Growth parameters: ' + regCoefExp.join(', '))
-      if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin * 100) {
+      if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin / 100) {
         stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
         theAccessory.context().put('stepCounter', ++stepCounter)
       }
