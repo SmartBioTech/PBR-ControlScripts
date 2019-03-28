@@ -423,11 +423,11 @@ function controlPump () {
               controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
               theAccessory.context().put('changeCounter', 1)
             }
+            theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
             theAccessory.context().remove('stepCounter')
             theAccessory.context().remove('expDuration')
             theAccessory.context().remove('stepDoublingTime')
             theAccessory.context().remove('stabilizedTime')
-            theAccessory.context().remove('stabilizedTimeMax')
           }
         }
       }
