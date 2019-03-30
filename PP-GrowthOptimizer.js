@@ -340,7 +340,6 @@ function controlPump () {
       theAccessory.context().remove('expDuration')
       theAccessory.context().remove('stepDoublingTime')
       theAccessory.context().remove('stabilizedTime')
-      theAccessory.context().remove('stabilizedTimeMax')
     }
   }
   // Start step growth rate evaluation
