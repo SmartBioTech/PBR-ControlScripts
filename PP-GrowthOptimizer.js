@@ -36,8 +36,8 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @version 3.1.5
- * @modified 25.3.2019 (JaCe)
+ * @version 3.1.6
+ * @modified 1.4.2019 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
