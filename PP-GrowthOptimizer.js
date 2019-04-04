@@ -299,6 +299,8 @@ function controlPump () {
   var odNoise = theAccessory.context().getInt('odNoise', 1)
   var odMinModifier = theAccessory.context().getDouble('odMinModifier', 1.0)
   var odMaxModifier = theAccessory.context().getDouble('odMaxModifier', 1.0)
+  var changeCounter = theAccessory.context().getInt('changeCounter', 0)
+  var stepCounter = theAccessory.context().getInt('stepCounter', 0)
   // Check for OD noise/overshots and primitive OD averaging
   if (!isNaN(odValue) && (round(odValue, 3) !== round(odLast, 3))) {
     if (odNoise) {
@@ -322,8 +324,7 @@ function controlPump () {
     UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
     debugLogger('OD range reversed.', 0)
   }
-  var changeCounter = theAccessory.context().getInt('changeCounter', 0)
-  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (changeCounter !== 0)) {
+  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (stepCounter !== 0)) {
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
     if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
       if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
@@ -340,14 +341,13 @@ function controlPump () {
       theAccessory.context().remove('expDuration')
       theAccessory.context().remove('stepDoublingTime')
       theAccessory.context().remove('stabilizedTime')
-      theAccessory.context().remove('stabilizedTimeMax')
     }
   }
   // Start step growth rate evaluation
   if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
     theAccessory.context().put('modeDilution', 1)
     theAccessory.context().put('modeStabilized', 0)
-    var stepCounter = theAccessory.context().getInt('stepCounter', 0)
+    // var stepCounter = theAccessory.context().getInt('stepCounter', 0)
     var expDuration = theAccessory.context().get('expDuration', 0.0)
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', 0.0)
@@ -423,11 +423,11 @@ function controlPump () {
               controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
               theAccessory.context().put('changeCounter', 1)
             }
+            theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
             theAccessory.context().remove('stepCounter')
             theAccessory.context().remove('expDuration')
             theAccessory.context().remove('stepDoublingTime')
             theAccessory.context().remove('stabilizedTime')
-            theAccessory.context().remove('stabilizedTimeMax')
           }
         }
       }
