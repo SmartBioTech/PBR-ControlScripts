@@ -36,6 +36,8 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
+ * @copyright Jan Červený 2019(c)
+ * @license MIT
  * @version 3.1.8
  * @modified 4.5.2019 (JaCe)
  *
