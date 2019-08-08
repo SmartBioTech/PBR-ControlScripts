@@ -3,12 +3,12 @@ A set of Control Scripts for PSI Bioreactor Client software developed in Departm
 
 ## Getting Started
 
-Put one of the below listed .js file content to PSI Bioreactor Client software [protocol scripting part](https://czechglobe-doab.github.io/PBR-Scripts/img/PBR-SW_Script.png) and modify appropriately UserDefinedProtocol section (object).
+Put one of the below listed .js file content to PSI Bioreactor Client software [protocol scripting part](https://czechglobe-doab.github.io/PBR-ControlScripts/img/PBR-SW_Script.png) and modify appropriately UserDefinedProtocol section (object).
 
-* [PP-GrowthOptimizer](https://czechglobe-doab.github.io/PBR-Scripts/PP-GrowthOptimizer.js)
+* [PP-GrowthOptimizer](https://czechglobe-doab.github.io/PBR-ControlScripts/PP-GrowthOptimizer.js)
 Script for automatic quazi-continous characterization and consequent optimization of microorganism cultivated in PBRs based on programatic control of selected PBR parameters. The script is activated on a peristaltic pump scripting protocol.
 Data postprocessing including growth rates (doubling times) calculation is available [here](https://czechglobe-doab.shinyapps.io/PBR-DataAnalysis/).
-* [O2-PIcurveMeasurement](https://czechglobe-doab.github.io/PBR-Scripts/O2-PIcurveMeasurement.js)
+* [O2-PIcurveMeasurement](https://czechglobe-doab.github.io/PBR-ControlScripts/O2-PIcurveMeasurement.js)
 Script for automatic measurement of oxygen evolution and respiration under different irradiances (PI curve measurements). The script is activated on the oxygen probe (O<sub>2</sub> dissolved) scripting protocol.
 
 ### Examples
@@ -76,7 +76,7 @@ See also the list of [contributors](https://czechglobe-doab.github.io/PBR-Script
 
 ## License
 
-Licensed under [MIT license](https://czechglobe-doab.github.io/PBR-Scripts/LICENSE)
+Licensed under [MIT license](https://czechglobe-doab.github.io/PBR-ControlScripts/LICENSE)
 
 ## Acknowledgments
 
