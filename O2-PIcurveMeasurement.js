@@ -23,6 +23,8 @@ var UserDefinedProtocol = {
  *
  * @script PI-Curves Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
+ * @copyright Jan Červený 2019(c)
+ * @license MIT
  * @version 1.2.3
  * @modified 16.3.2019 (JaCe)
  * @notes For proper function of the script following protocols have to be disabled: "Lights", "Bubble intr. valve" and "Stirrer"
