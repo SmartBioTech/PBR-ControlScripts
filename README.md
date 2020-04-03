@@ -1,14 +1,14 @@
 # PBR-Scripts
-A set of Control Scripts for PSI Bioreactor Client software developed in Department of Adaptive Biotechnologies. These scripts allow automatization of both basic and advanced funcionalities not available in standard distribution of the client software. 
+A set of Control Scripts for PSI Bioreactor Client software developed in Department of Adaptive Biotechnologies. These scripts allow automation of both basic and advanced funcionalities not available in standard distribution of the client software. 
 
 ## Getting Started
 
-Put one of the below listed .js file content to PSI Bioreactor Client software [protocol scripting part](https://czechglobe-doab.github.io/PBR-ControlScripts/img/PBR-SW_Script.png) and modify appropriately UserDefinedProtocol section (object).
+Put one of the below listed .js files content to PSI Bioreactor Client software [protocol scripting part](https://smartbiotech.github.io/PBR-ControlScripts/img/PBR-SW_Script.png) and modify appropriately UserDefinedProtocol section (object).
 
-* [PP-GrowthOptimizer](https://czechglobe-doab.github.io/PBR-ControlScripts/PP-GrowthOptimizer.js)
+* [PP-GrowthOptimizer](https://smartbiotech.github.io/PBR-ControlScripts/PP-GrowthOptimizer.js)
 Script for automatic quazi-continous characterization and consequent optimization of microorganism cultivated in PBRs based on programatic control of selected PBR parameters. The script is activated on a peristaltic pump scripting protocol.
 Data postprocessing including growth rates (doubling times) calculation is available [here](https://czechglobe-doab.shinyapps.io/PBR-DataAnalysis/).
-* [O2-PIcurveMeasurement](https://czechglobe-doab.github.io/PBR-ControlScripts/O2-PIcurveMeasurement.js)
+* [O2-PIcurveMeasurement](https://smartbiotech.github.io/PBR-ControlScripts/O2-PIcurveMeasurement.js)
 Script for automatic measurement of oxygen evolution and respiration under different irradiances (PI curve measurements). The script is activated on the oxygen probe (O<sub>2</sub> dissolved) scripting protocol.
 
 ### Examples
@@ -72,11 +72,11 @@ This setting enables measurement of PI curve in seven different light intensitie
 
 * **Jan Červený** - *Initial work* - [Department of Adaptive Biotechnologies](http://www.czechglobe.cz/en/institute-structure/research-sector/v-domain-adaptive-and-innovative-techniques/#doab)
 
-See also the list of [contributors](https://czechglobe-doab.github.io/PBR-Scripts/CONTRIBUTORS.md) who participated in this project.
+See also the list of [contributors](https://smartbiotech.github.io/PBR-Scripts/CONTRIBUTORS.md) who participated in this project.
 
 ## License
 
-Licensed under [MIT license](https://czechglobe-doab.github.io/PBR-ControlScripts/LICENSE)
+Licensed under [MIT license](https://smartbiotech.github.io/PBR-ControlScripts/LICENSE)
 
 ## Acknowledgments
 
