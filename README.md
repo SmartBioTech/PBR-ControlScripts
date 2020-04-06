@@ -12,7 +12,7 @@ Data postprocessing including growth rates (doubling times) calculation is avail
 Script for automatic measurement of oxygen evolution and respiration under different irradiances (PI curve measurements). The script is activated on the oxygen probe (O<sub>2</sub> dissolved) scripting protocol.
 
 Stable releases:
-v1.0: [PP-GrowthOptimizer](https://smartbiotech.github.io/PBR-ControlScripts/Releases/PP-GrowthOptimizer_v1.js), [O2-PIcurveMeasurement](https://smartbiotech.github.io/PBR-ControlScripts/O2-PIcurveMeasurement_v1.js)
+v1.0: [PP-GrowthOptimizer](https://smartbiotech.github.io/PBR-ControlScripts/Releases/PP-GrowthOptimizer_v1.js), [O2-PIcurveMeasurement](https://smartbiotech.github.io/PBR-ControlScripts/Releases/O2-PIcurveMeasurement_v1.js)
 
 ### Examples
 
