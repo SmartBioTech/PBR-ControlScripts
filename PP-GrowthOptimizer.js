@@ -38,8 +38,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2019(c)
  * @license MIT
- * @version 3.1.8
- * @modified 4.5.2019 (JaCe)
+ * @version 3.1.9
+ * @modified 19.7.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -198,44 +198,25 @@ if (!theAccessory.context().getInt('initialization', 0)) {
     default:
       theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting')
   }
-  // TODO rewrite following part
-  if (UserDefinedProtocol.turbidostatODType === 720 || 735) {
+  if (UserDefinedProtocol.turbidostatODType === 680 || UserDefinedProtocol.regressionODType === 680) {
+    if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
+      theExperiment.addEvent('!!! OD680 measurement protocol is set to wrong interval. Please correct it !!!')
+    }
+  } 
+  if (UserDefinedProtocol.turbidostatODType === 720 || UserDefinedProtocol.regressionODType === 720 || UserDefinedProtocol.turbidostatODType === 735 || UserDefinedProtocol.regressionODType === 735 ) {
     var OD7XYString
     if (theGroup.getAccessory('od-sensors.od-720') === null) {
       OD7XYString = 'od-sensors.od-735'
       if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
-        theExperiment.addEvent('!!! OD735 measurement protocol set to wrong interval')
+        theExperiment.addEvent('!!! OD735 measurement protocol is set to wrong interval. Please correct it !!!')
       }
     } else {
       OD7XYString = 'od-sensors.od-720'
       if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
-        theExperiment.addEvent('!!! OD720 measurement protocol set to wrong interval')
+        theExperiment.addEvent('!!! OD720 measurement protocol is set to wrong interval. Please correct it !!!')
       }
     }
     theAccessory.context().put('OD7XYString', OD7XYString)
-  } else {
-    if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
-      theExperiment.addEvent('!!! OD680 measurement protocol set to wrong interval')
-    }
-  }
-  if (UserDefinedProtocol.regressionODType === 720 || 735) {
-    var RegOD7XYString
-    if (theGroup.getAccessory('od-sensors.od-720') === null) {
-      RegOD7XYString = 'od-sensors.od-735'
-      if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
-        theExperiment.addEvent('!!! OD735 measurement protocol set to wrong interval')
-      }
-    } else {
-      RegOD7XYString = 'od-sensors.od-720'
-      if (Number(theGroup.getAccessory(OD7XYString).getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
-        theExperiment.addEvent('!!! OD720 measurement protocol set to wrong interval')
-      }
-    }
-    theAccessory.context().put('RegOD7XYString', RegOD7XYString)
-  } else {
-    if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
-      theExperiment.addEvent('!!! OD680 measurement protocol set to wrong interval')
-    }
   }
   controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0])
   theAccessory.context().put('initialization', 1)
