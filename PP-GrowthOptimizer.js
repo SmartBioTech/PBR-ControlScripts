@@ -27,7 +27,7 @@ var UserDefinedProtocol = {
   groupGMS: theGroup
 }
 
-/* globals
+/* global
   importPackage, java, Packages, theGroup, theAccessory, theExperiment, theLogger, ProtoConfig, ETrendFunction, result: true
 */
 
@@ -225,9 +225,8 @@ try {
     debugLogger('Peristaltic Pump - Growth Optimizer initialization successful.')
   }
 } catch (error) {
-  debugLogger('Initialization ERROR. ${error.name}  :  ${error.message}')
+  debugLogger('Initialization ERROR. ' + error.name + ' : ' + error.message)
 }
-
 
 /**
   function setODSensorString (ODType) {
@@ -438,7 +437,7 @@ function controlPump () {
       return null // pump not influenced
     }  
   } catch (error) {
-    debugLogger('controlPump ERROR. ${error.name} : ${error.message}')
+    debugLogger('controlPump ERROR. ' + error.name + ' : ' + error.message)
   }
 }
 
