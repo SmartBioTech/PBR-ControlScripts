@@ -36,10 +36,10 @@ var UserDefinedProtocol = {
  *
  * @script Peristaltic Pump - Automatic Growth Characterization
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
- * @copyright Jan Červený 2019(c)
+ * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.1.9
- * @modified 19.7.2020 (JaCe)
+ * @version 3.3.0
+ * @modified 14.8.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -88,71 +88,9 @@ importPackage(java.lang)
 importPackage(Packages.psi.bioreactor.core.protocol)
 importPackage(Packages.psi.bioreactor.core.regression)
 
-// Common functions
-function round (number, decimals) {
-  // Rounding specific decimal point number
-  return +(Math.round(number + 'e+' + decimals) + 'e-' + decimals)
-}
-function debugLogger (message, status) {
-  if ((status === undefined) || (status === 1) || (status === 'on')) {
-    theLogger.info('[' + theGroup.getName() + '] ' + message)
-  } else {
-    return null
-  }
-}
-function controlParameter (parameter, values) {
-  // Control accessory functions
-  if ((parameter === undefined) || (parameter === 'none') || (values === undefined)) {
-    return null
-  }
-  var unit
-  switch (parameter) {
-    case 'lights':
-      var light0 = theGroup.getAccessory('actinic-lights.light-Red')
-      var light1 = theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue'))
-      unit = ' uE'
-      light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
-      light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue || White
-      debugLogger('Lights changed.')
-      break
-    case 'temperature':
-      var thermoreg = theGroup.getAccessory('thermo.thermo-reg')
-      unit = String.fromCharCode(176) + 'C'
-      thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values)))
-      debugLogger('Temperature changed.')
-      break
-    case 'GMS':
-      var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
-      var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
-      unit = ' ml/min'
-      valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])))
-      valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
-      var flowAir = valve0.getProtoConfigValue()
-      var flowCO2 = valve1.getProtoConfigValue()
-      debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 2) + ' ml/min and CO2 flow ' + round(flowCO2, 2) + ' ml/min (' + round((flowCO2 / (flowCO2 + flowAir) + 400 / 1e6) * 100, 1) + '%)')
-      break
-    case 'stirrer':
-      var stirrer = theGroup.getAccessory('pwm.stirrer')
-      unit = '%'
-      stirrer.setRunningProtoConfig(new ProtoConfig(Number(values)))
-      debugLogger('Stirrer changed.')
-      break
-    case 'ODRange':
-      theAccessory.context().put('odMinModifier', Number(values[0]) / UserDefinedProtocol.turbidostatODMin)
-      theAccessory.context().put('odMaxModifier', Number(values[1]) / UserDefinedProtocol.turbidostatODMax)
-      unit = ' AU'
-      debugLogger('Turbidostat OD range changed.')
-      break
-    default:
-      return null
-  }
-  theAccessory.context().put('controlledParameterText', parameter + ' ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
-  theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + ' changed to ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
-}
-
 // Inicialization of the control script
-try {
-  if (!theAccessory.context().getInt('initialization', 0)) {
+if (!theAccessory.context().getInt('initiated', 0)) {
+  try {
     theAccessory.context().clear()
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
     var light1String
@@ -221,13 +159,31 @@ try {
       theAccessory.context().put('OD7XYString', OD7XYString)
     }
     controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0])
-    theAccessory.context().put('initialization', 1)
+    theAccessory.context().put('initiated', 1)
     debugLogger('Peristaltic Pump - Growth Optimizer initialization successful.')
+  } catch (error) {
+    debugLogger('Initialization ERROR. ' + error.name + ' : ' + error.message)
   }
-} catch (error) {
-  debugLogger('Initialization ERROR. ' + error.name + ' : ' + error.message)
 }
 
+// Set the pump
+try {
+  var pumpState = !isNaN(theAccessory.getValue())
+  // Check whether O2 evolution and respiration measurement mode is active
+  if (theGroup.getAccessory('probes.o2').context().getInt('modeO2EvolResp', 0)) {
+    if (pumpState) {
+      theAccessory.context().put('pumpSuspended', 1)
+      result = theAccessory.getMin()
+    }
+  } else if (theAccessory.context().getInt('pumpSuspended', 0)) {
+    theAccessory.context().put('pumpSuspended', 0)
+    result = theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100
+  } else {
+    result = controlPump()
+  }
+} catch (error) {
+  debugLogger('O2 evol./resp. activity check ERROR. ' + error.name + ' : ' + error.message)
+}
 /**
   function setODSensorString (ODType) {
     // Set ODtype = [turbidostat, regression]
@@ -259,203 +215,241 @@ try {
   }
   */
 
-// Control activity of the peristaltic pump 
-function controlPump () {
-  try {
-    // Following code ready for functional implementation
-    // setODSensorString("turbidostat");
-    // setODSensorString("regression");
-    var odSensorString, odSensorRegressionString
-    switch (UserDefinedProtocol.turbidostatODType) {
-      case 680:
-        odSensorString = 'od-sensors.od-680'
-        break
-      default:
-        odSensorString = theAccessory.context().get('OD7XYString', 'od-sensors.od-720')
-    }
-    switch (UserDefinedProtocol.regressionODType) {
-      case 680:
-        odSensorRegressionString = 'od-sensors.od-680'
-        break
-      default:
-        odSensorRegressionString = theAccessory.context().get('RegOD7XYString', 'od-sensors.od-720')
-    }
-    var odSensor = theGroup.getAccessory(odSensorString)
-    var odSensorRegression = theGroup.getAccessory(odSensorRegressionString)
-    if (odSensor === null || odSensor.hasError()) {
-      return null // pump not influenced
-    }
-    var odValue = odSensor.getValue()
-    var odLast = theAccessory.context().getDouble('odLast', 0.0)
-    var odNoise = theAccessory.context().getInt('odNoise', 1)
-    var odMinModifier = theAccessory.context().getDouble('odMinModifier', 1.0)
-    var odMaxModifier = theAccessory.context().getDouble('odMaxModifier', 1.0)
-    var changeCounter = theAccessory.context().getInt('changeCounter', 0)
-    var stepCounter = theAccessory.context().getInt('stepCounter', 0)
-    // Check for OD noise/overshots and primitive OD averaging
-    if (!isNaN(odValue) && (round(odValue, 3) !== round(odLast, 3))) {
-      if (odNoise) {
-        theAccessory.context().put('odNoise', 0)
-        theAccessory.context().put('odLast', odValue)
-        return null
-      }
-      if (pumpState || (Math.abs(1 - odValue / odLast) < 0.04)) {
-        odValue = (odValue + odLast) / 2
-        theAccessory.context().put('odLast', odValue)
-      } else {
-        theAccessory.context().put('odNoise', 1)
-        theAccessory.context().put('odLast', odValue)
-        return null
-      }
-    } else {
-      return null
-    }
-    // Check for reversed OD range
-    if (UserDefinedProtocol.turbidostatODMin > UserDefinedProtocol.turbidostatODMax) {
-      UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
-      debugLogger('OD range reversed.', 0)
-    }
-    if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (stepCounter !== 0)) {
-      theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
-      if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-        if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-          controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
-          theAccessory.context().put('changeCounter', changeCounter)
-        } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-          controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)])
-          theAccessory.context().put('changeCounter', changeCounter)
-        } else {
-          controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
-          theAccessory.context().put('changeCounter', 1)
-        }
-        theAccessory.context().remove('stepCounter')
-        theAccessory.context().remove('expDuration')
-        theAccessory.context().remove('stepDoublingTime')
-        theAccessory.context().remove('stabilizedTime')
-      }
-    }
-    // Start step growth rate evaluation
-    if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
-      theAccessory.context().put('modeDilution', 1)
-      theAccessory.context().put('modeStabilized', 0)
-      // var stepCounter = theAccessory.context().getInt('stepCounter', 0)
-      var expDuration = theAccessory.context().get('expDuration', 0.0)
-      var stepDuration = theAccessory.context().get('stepDuration', 0.0)
-      var stepDoublingTime = theAccessory.context().get('stepDoublingTime', 0.0)
-      var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
-      // var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
-      if (!Array.isArray(expDuration)) {
-        stepCounter = 0
-        expDuration = []; stepDuration = []; stepDoublingTime = []
-        theAccessory.context().put('expDuration', expDuration)
-        theAccessory.context().put('stepDuration', stepDuration)
-        theAccessory.context().put('stepDoublingTime', stepDoublingTime)
-        theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
-        theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
-        odSensorRegression.getDataHistory().setCapacity(600)
-      }
-      expDuration[stepCounter] = theExperiment.getDurationSec()
-      stepDuration[stepCounter] = expDuration[stepCounter] - theAccessory.context().getInt('lastPumpStop', expDuration[stepCounter])
-      if ((stepDuration[stepCounter] > 0) && UserDefinedProtocol.growthStatistics) {
-        var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60
-        var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (UserDefinedProtocol.growthRateEvalFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)))
-        debugLogger('Growth parameters: ' + regCoefExp.join(', '))
-        if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin / 100) {
-          stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
-          theAccessory.context().put('stepCounter', ++stepCounter)
-        }
-        theExperiment.addEvent('Doubling time of the step was ' + round((1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2, 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%)')
-        if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
-          var stepDoublingTimeAvg = 0
-          var stepDoublingTimeSD = 0
-          var stepDoublingTimeIC95 = 0
-          var stepTrend = 0
-          // var stepCoD = 0
-          var sumXY = 0
-          var sumX = 0
-          var sumY = 0
-          var sumX2 = 0
-          // var sumY2 = 0
-          // Average of steps doubling time
-          for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
-            stepDoublingTimeAvg += Number(stepDoublingTime[i])
-          }
-          stepDoublingTimeAvg /= UserDefinedProtocol.analyzedSteps
-          // IC95 of steps doubling time
-          for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
-            stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
-          }
-          stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / UserDefinedProtocol.analyzedSteps)
-          stepDoublingTimeIC95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps) * 1.96
-          // Trend of steps doubling time
-          for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
-            sumX += Number(expDuration[i])
-            sumX2 += Math.pow(expDuration[i], 2)
-            sumY += Number(stepDoublingTime[i])
-            // sumY2 += Math.pow(stepDoublingTime[i], 2)
-            sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
-          }
-          stepTrend = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * 3600
-          // stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
-          theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
-          // Growth stability test and parameters control
-          if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
-            theAccessory.context().put('modeStabilized', 1)
-            // changeCounter = theAccessory.context().getInt('changeCounter', 0)
-            theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
-            if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-              if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-                controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
-                theAccessory.context().put('changeCounter', changeCounter)
-              } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-                controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)])
-                theAccessory.context().put('changeCounter', changeCounter)
-              } else {
-                controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
-                theAccessory.context().put('changeCounter', 1)
-              }
-              theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
-              theAccessory.context().remove('stepCounter')
-              theAccessory.context().remove('expDuration')
-              theAccessory.context().remove('stepDoublingTime')
-              theAccessory.context().remove('stabilizedTime')
-            }
-          }
-        }
-      }
-      debugLogger('Pump max speed.')
-      return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 // fast
-    } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier)) && pumpState) {
-      theAccessory.context().put('modeDilution', 0)
-      theAccessory.context().put('lastPumpStop', theExperiment.getDurationSec())
-      debugLogger('Pump stopped.')
-      return ProtoConfig.OFF // pump off
-    } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier + ((UserDefinedProtocol.turbidostatODMax * odMaxModifier) - (UserDefinedProtocol.turbidostatODMin * odMinModifier)) * UserDefinedProtocol.peristalticPumpSlowDownRange / 100)) && pumpState) {
-      debugLogger('Pump low speed.', 0)
-      return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100 // slow down the pump
-    } else {
-      return null // pump not influenced
-    }  
-  } catch (error) {
-    debugLogger('controlPump ERROR. ' + error.name + ' : ' + error.message)
+// Common functions
+function round (number, decimals) {
+  // Rounding specific decimal point number
+  return +(Math.round(number + 'e+' + decimals) + 'e-' + decimals)
+}
+function debugLogger (message, status) {
+  if ((status === undefined) || (status === 1) || (status === 'on')) {
+    theLogger.info('[' + theGroup.getName() + '] ' + message)
+  } else {
+    return null
   }
 }
-
-// Check whether O2 evolution and respiration measurement mode is active
-try {
-  // Set the pump
-  var pumpState = !isNaN(theAccessory.getValue())
-  if (theGroup.getAccessory('probes.o2').context().getInt('modeO2EvolResp', 0)) {
-    if (pumpState) {
-      theAccessory.context().put('pumpSuspended', 1)
-      result = theAccessory.getMin()
-    }
-  } else if (theAccessory.context().getInt('pumpSuspended', 0)) {
-    theAccessory.context().put('pumpSuspended', 0)
-    result = theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100
-  } else {
-    result = controlPump()
+function controlParameter (parameter, values) {
+  // Control accessory functions
+  if ((parameter === undefined) || (parameter === 'none') || (values === undefined)) {
+    return null
   }
-} catch (error) {
-  debugLogger('O2 evol./resp. activity check ERROR. ${error.name}  :  ${error.message}')
+  var unit
+  switch (parameter) {
+    case 'lights':
+      var light0 = theGroup.getAccessory('actinic-lights.light-Red')
+      var light1 = theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue'))
+      unit = ' uE'
+      light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
+      light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue || White
+      debugLogger('Lights changed.')
+      break
+    case 'temperature':
+      var thermoreg = theGroup.getAccessory('thermo.thermo-reg')
+      unit = String.fromCharCode(176) + 'C'
+      thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values)))
+      debugLogger('Temperature changed.')
+      break
+    case 'GMS':
+      var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
+      var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
+      unit = ' ml/min'
+      valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])))
+      valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
+      var flowAir = valve0.getProtoConfigValue()
+      var flowCO2 = valve1.getProtoConfigValue()
+      debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 2) + ' ml/min and CO2 flow ' + round(flowCO2, 2) + ' ml/min (' + round((flowCO2 / (flowCO2 + flowAir) + 400 / 1e6) * 100, 1) + '%)')
+      break
+    case 'stirrer':
+      var stirrer = theGroup.getAccessory('pwm.stirrer')
+      unit = '%'
+      stirrer.setRunningProtoConfig(new ProtoConfig(Number(values)))
+      debugLogger('Stirrer changed.')
+      break
+    case 'ODRange':
+      theAccessory.context().put('odMinModifier', Number(values[0]) / UserDefinedProtocol.turbidostatODMin)
+      theAccessory.context().put('odMaxModifier', Number(values[1]) / UserDefinedProtocol.turbidostatODMax)
+      unit = ' AU'
+      debugLogger('Turbidostat OD range changed.')
+      break
+    default:
+      return null
+  }
+  theAccessory.context().put('controlledParameterText', parameter + ' ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
+  theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + ' changed to ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
+}
+// Control activity of the peristaltic pump 
+function controlPump () {
+  // Following code ready for functional implementation
+  // setODSensorString("turbidostat");
+  // setODSensorString("regression");
+  var odSensorString, odSensorRegressionString
+  switch (UserDefinedProtocol.turbidostatODType) {
+    case 680:
+      odSensorString = 'od-sensors.od-680'
+      break
+    default:
+      odSensorString = theAccessory.context().get('OD7XYString', 'od-sensors.od-720')
+  }
+  switch (UserDefinedProtocol.regressionODType) {
+    case 680:
+      odSensorRegressionString = 'od-sensors.od-680'
+      break
+    default:
+      odSensorRegressionString = theAccessory.context().get('RegOD7XYString', 'od-sensors.od-720')
+  }
+  var odSensor = theGroup.getAccessory(odSensorString)
+  var odSensorRegression = theGroup.getAccessory(odSensorRegressionString)
+  if (odSensor === null || odSensor.hasError()) {
+    return null // pump not influenced
+  }
+  var odValue = odSensor.getValue()
+  var odLast = theAccessory.context().getDouble('odLast', 0.0)
+  var odNoise = theAccessory.context().getInt('odNoise', 1)
+  var odMinModifier = theAccessory.context().getDouble('odMinModifier', 1.0)
+  var odMaxModifier = theAccessory.context().getDouble('odMaxModifier', 1.0)
+  var changeCounter = theAccessory.context().getInt('changeCounter', 0)
+  var stepCounter = theAccessory.context().getInt('stepCounter', 0)
+  // Check for OD noise/overshots and primitive OD averaging
+  if (!isNaN(odValue) && (round(odValue, 3) !== round(odLast, 3))) {
+    if (odNoise) {
+      theAccessory.context().put('odNoise', 0)
+      theAccessory.context().put('odLast', odValue)
+      return null
+    }
+    if (pumpState || (Math.abs(1 - odValue / odLast) < 0.04)) {
+      odValue = (odValue + odLast) / 2
+      theAccessory.context().put('odLast', odValue)
+    } else {
+      theAccessory.context().put('odNoise', 1)
+      theAccessory.context().put('odLast', odValue)
+      return null
+    }
+  } else {
+    return null
+  }
+  // Check for reversed OD range
+  if (UserDefinedProtocol.turbidostatODMin > UserDefinedProtocol.turbidostatODMax) {
+    UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
+    debugLogger('OD range reversed.', 0)
+  }
+  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (stepCounter !== 0)) {
+    theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
+    if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
+      if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
+        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
+        theAccessory.context().put('changeCounter', changeCounter)
+      } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
+        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)])
+        theAccessory.context().put('changeCounter', changeCounter)
+      } else {
+        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
+        theAccessory.context().put('changeCounter', 1)
+      }
+      theAccessory.context().remove('stepCounter')
+      theAccessory.context().remove('expDuration')
+      theAccessory.context().remove('stepDoublingTime')
+      theAccessory.context().remove('stabilizedTime')
+    }
+  }
+  // Start step growth rate evaluation
+  if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
+    theAccessory.context().put('modeDilution', 1)
+    theAccessory.context().put('modeStabilized', 0)
+    // var stepCounter = theAccessory.context().getInt('stepCounter', 0)
+    var expDuration = theAccessory.context().get('expDuration', 0.0)
+    var stepDuration = theAccessory.context().get('stepDuration', 0.0)
+    var stepDoublingTime = theAccessory.context().get('stepDoublingTime', 0.0)
+    var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
+    // var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
+    if (!Array.isArray(expDuration)) {
+      stepCounter = 0
+      expDuration = []; stepDuration = []; stepDoublingTime = []
+      theAccessory.context().put('expDuration', expDuration)
+      theAccessory.context().put('stepDuration', stepDuration)
+      theAccessory.context().put('stepDoublingTime', stepDoublingTime)
+      theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
+      theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
+      odSensorRegression.getDataHistory().setCapacity(600)
+    }
+    expDuration[stepCounter] = theExperiment.getDurationSec()
+    stepDuration[stepCounter] = expDuration[stepCounter] - theAccessory.context().getInt('lastPumpStop', expDuration[stepCounter])
+    if ((stepDuration[stepCounter] > 0) && UserDefinedProtocol.growthStatistics) {
+      var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60
+      var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (UserDefinedProtocol.growthRateEvalFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)))
+      debugLogger('Growth parameters: ' + regCoefExp.join(', '))
+      if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin / 100) {
+        stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
+        theAccessory.context().put('stepCounter', ++stepCounter)
+      }
+      theExperiment.addEvent('Doubling time of the step was ' + round((1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2, 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%)')
+      if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
+        var stepDoublingTimeAvg = 0
+        var stepDoublingTimeSD = 0
+        var stepDoublingTimeIC95 = 0
+        var stepTrend = 0
+        // var stepCoD = 0
+        var sumXY = 0
+        var sumX = 0
+        var sumY = 0
+        var sumX2 = 0
+        // var sumY2 = 0
+        // Average of steps doubling time
+        for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
+          stepDoublingTimeAvg += Number(stepDoublingTime[i])
+        }
+        stepDoublingTimeAvg /= UserDefinedProtocol.analyzedSteps
+        // IC95 of steps doubling time
+        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
+          stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
+        }
+        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / UserDefinedProtocol.analyzedSteps)
+        stepDoublingTimeIC95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps) * 1.96
+        // Trend of steps doubling time
+        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
+          sumX += Number(expDuration[i])
+          sumX2 += Math.pow(expDuration[i], 2)
+          sumY += Number(stepDoublingTime[i])
+          // sumY2 += Math.pow(stepDoublingTime[i], 2)
+          sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
+        }
+        stepTrend = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * 3600
+        // stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
+        theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
+        // Growth stability test and parameters control
+        if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
+          theAccessory.context().put('modeStabilized', 1)
+          // changeCounter = theAccessory.context().getInt('changeCounter', 0)
+          theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
+          if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
+            if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
+              controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
+              theAccessory.context().put('changeCounter', changeCounter)
+            } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
+              controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)])
+              theAccessory.context().put('changeCounter', changeCounter)
+            } else {
+              controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
+              theAccessory.context().put('changeCounter', 1)
+            }
+            theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
+            theAccessory.context().remove('stepCounter')
+            theAccessory.context().remove('expDuration')
+            theAccessory.context().remove('stepDoublingTime')
+            theAccessory.context().remove('stabilizedTime')
+          }
+        }
+      }
+    }
+    debugLogger('Pump max speed.')
+    return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 // fast
+  } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier)) && pumpState) {
+    theAccessory.context().put('modeDilution', 0)
+    theAccessory.context().put('lastPumpStop', theExperiment.getDurationSec())
+    debugLogger('Pump stopped.')
+    return ProtoConfig.OFF // pump off
+  } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier + ((UserDefinedProtocol.turbidostatODMax * odMaxModifier) - (UserDefinedProtocol.turbidostatODMin * odMinModifier)) * UserDefinedProtocol.peristalticPumpSlowDownRange / 100)) && pumpState) {
+    debugLogger('Pump low speed.', 0)
+    return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100 // slow down the pump
+  } else {
+    return null // pump not influenced
+  }  
 }
