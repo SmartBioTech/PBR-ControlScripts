@@ -5,8 +5,8 @@ var UserDefinedProtocol = {
   turbidostatODType: 720,
   ODReadoutInterval: 60,
   // -optimizer parameters
-  controlledParameter: 'none',
-  controlledParameterSteps: [[ 1100, 25 ], [ 440, 25 ], [ 55, 25 ]],
+  controlledParameter: 'temperature',
+  controlledParameterSteps: [ 25 ],
   particleSwarmOptimizer: true,
   // -optimizer stability check
   growthStatistics: true,
@@ -39,8 +39,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.3.1
- * @modified 17.8.2020 (JaCe)
+ * @version 3.3.2
+ * @modified 19.8.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -183,7 +183,7 @@ try {
     result = controlPump()
   }
 } catch (error) {
-  debugLogger('O2 evol./resp. activity check ERROR. ' + error.name + ' : ' + error.message)
+  debugLogger('The pump activity ERROR. ' + error.name + ' : ' + error.message)
 }
 /**
   function setODSensorString (ODType) {
@@ -244,13 +244,13 @@ function controlParameter (parameter, values) {
       unit = ' uE'
       light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
       light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue || White
-      debugLogger('Lights changed.')
+      debugLogger('Lights changed. Channel 0 set to ' + round(values[0], 0) + unit + ' and channel 1 set to ' + round(values[1], 0) + unit)
       break
     case 'temperature':
       var thermoreg = theGroup.getAccessory('thermo.thermo-reg')
-      unit = String.fromCharCode(176) + 'C'
+      unit = ' ' + String.fromCharCode(176) + 'C'
       thermoreg.setRunningProtoConfig(new ProtoConfig(Number(values)))
-      debugLogger('Temperature changed.')
+      debugLogger('Temperature changed. Thermoregulator set to ' + round(values, 2) + unit)
       break
     case 'GMS':
       var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
@@ -260,19 +260,19 @@ function controlParameter (parameter, values) {
       valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
       var flowAir = valve0.getProtoConfigValue()
       var flowCO2 = valve1.getProtoConfigValue()
-      debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 2) + ' ml/min and CO2 flow ' + round(flowCO2, 2) + ' ml/min (' + round((flowCO2 / (flowCO2 + flowAir) + 400 / 1e6) * 100, 1) + '%)')
+      debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 0) + unit + ' and CO2 flow ' + round(flowCO2, 1) + unit + ' (' + round((flowCO2 / (flowCO2 + flowAir) + 395 / 1e6) * 100, 1) + '%)')
       break
     case 'stirrer':
       var stirrer = theGroup.getAccessory('pwm.stirrer')
       unit = '%'
       stirrer.setRunningProtoConfig(new ProtoConfig(Number(values)))
-      debugLogger('Stirrer changed.')
+      debugLogger('Stirrer changed. Stirrer set to ' + round(values, 0) + unit)
       break
     case 'ODRange':
       theAccessory.context().put('odMinModifier', Number(values[0]) / UserDefinedProtocol.turbidostatODMin)
       theAccessory.context().put('odMaxModifier', Number(values[1]) / UserDefinedProtocol.turbidostatODMax)
       unit = ' AU'
-      debugLogger('Turbidostat OD range changed.')
+      debugLogger('Turbidostat settings changed. OD range set to ' + round(values[0], 3) + ' - ' + round(values[1], 3) + unit)
       break
     default:
       return null
@@ -337,7 +337,14 @@ function controlPump () {
   }
   if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (stepCounter !== 0)) {
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
-    if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
+    if (UserDefinedProtocol.particleSwarmOptimizer) {
+      var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
+      controlParameter(UserDefinedProtocol.controlledParameter, PSO(stepDoublingTime[stepDoublingTime.length - 1])) //TODO change to average of last n steps 
+      theAccessory.context().remove('stepCounter')
+      theAccessory.context().remove('expDuration')
+      theAccessory.context().remove('stepDoublingTime')
+      theAccessory.context().remove('stabilizedTime')
+    } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
       if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
         controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
         theAccessory.context().put('changeCounter', changeCounter)
@@ -352,7 +359,7 @@ function controlPump () {
       theAccessory.context().remove('expDuration')
       theAccessory.context().remove('stepDoublingTime')
       theAccessory.context().remove('stabilizedTime')
-    }
+    }  
   }
   // Start step growth rate evaluation
   if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
@@ -361,7 +368,7 @@ function controlPump () {
     // var stepCounter = theAccessory.context().getInt('stepCounter', 0)
     var expDuration = theAccessory.context().get('expDuration', 0.0)
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
-    var stepDoublingTime = theAccessory.context().get('stepDoublingTime', 0.0)
+    var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
     var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
     // var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
     if (!Array.isArray(expDuration)) {
@@ -422,7 +429,7 @@ function controlPump () {
         if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
           theAccessory.context().put('modeStabilized', 1)
           // changeCounter = theAccessory.context().getInt('changeCounter', 0)
-          theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
+          theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + '  ' + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
           if (UserDefinedProtocol.particleSwarmOptimizer) {
             controlParameter(UserDefinedProtocol.controlledParameter, PSO(stepDoublingTimeAvg))
           } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
@@ -472,23 +479,30 @@ function PSO (particleFitness) {
    * 
    * @return {array}         New parameters / conditions.          
    */
+  debugLogger('BioArInEO-PSO executed') 
   theAccessory.context().put('particleFitness', particleFitness)
   var parameterSearchRange = [15, 35]
-  var particlePosition = theAccessory.context().get('particlePosition', UserDefinedProtocol.controlledParameterSteps[0])
-  var particleBestPosition = theAccessory.context().get('particleBestPosition', particlePosition)
+  var particlePosition = Number(theAccessory.context().get('particlePosition', UserDefinedProtocol.controlledParameterSteps[0])) //TODO multidimensional support
+  theAccessory.context().put('particlePosition', particlePosition)
+  var particleBestPosition = Number(theAccessory.context().get('particleBestPosition', particlePosition))
   var particleBestFitness = theAccessory.context().get('particleBestFitness', particleFitness)
   var particleStep = theAccessory.context().get('particleStep', 0.2 * parameterSearchRange[1] - parameterSearchRange[0]) // TODO change to multiparameter version
   var maxStep = 5 // TODO adjust to multiparameter version, i.e. for each parameter reccommended limit (5 is for temperature)
   var swarmLeader = theServer.getGroupByName('DoAB-PBR01-group') // TODO add identifier from UserDefinedProtocol instead
-  var swarmBestPosition = swarmLeader.getAccessory('pumps.pump-5').context().get('swarmBestPosition', particlePosition)
+  var swarmBestPosition = Number(swarmLeader.getAccessory('pumps.pump-5').context().get('swarmBestPosition', particlePosition))
   var swarmBestFitness = swarmLeader.getAccessory('pumps.pump-5').context().get('swarmBestFitness', particleFitness)
-  var neighborsList = ['DoAB-PBR02-group','DoAB-PBR03-group','DoAB-PBR04-group','DoAB-PBR05-group'] // TODO  add  identifier from UserDefinedProtocol. !!! needs to be adjusted for each particle
-  var neighborsPosition = neighborsList.slice()
-  neighborsPosition.forEach(function(value, index, arr) { arr[index] = theServer.getGroupByName(value).context().get('particlePosition', undefined) * 2 })
-  var neighborsFitness = neighborsList.slice()
-  neighborsFitness.forEach(function(value, index, arr) { arr[index] = theServer.getGroupByName(value).context().get('particleFitness', undefined) })
+  debugLogger('BioArInEO-PSO best swarm position is ' + swarmBestPosition + ' with fitness ' + swarmBestFitness)
+  var neighborsList = ['DoAB-PBR02-group'] // TODO  add  identifier from UserDefinedProtocol. !!! needs to be adjusted for each particle
+  var neighborsPosition = []
+  var neighborsFitness = []
+  var index, len
+  for ( index = 0, len = neighborsList.length; index < len; ++index) {
+    neighborsPosition.push(theServer.getGroupByName(neighborsList[index]).getAccessory('pumps.pump-5').context().get('particlePosition', particlePosition));
+    neighborsFitness.push(theServer.getGroupByName(neighborsList[index]).getAccessory('pumps.pump-5').context().get('particleFitness', particleFitness))
+  }
   var neighborsBestFitness = Math.min.apply(null, neighborsFitness)
-  var neighborsBestPosition = neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness)]
+  var neighborsBestPosition = Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness)])
+  debugLogger('BioArInEO-PSO best neighbors position is ' + neighborsBestPosition + ' with fitness ' + neighborsBestFitness)
   var newPosition = []
   // try {
   //   swarmBestPosition = swarmBestPosition.split(',')
@@ -499,17 +513,21 @@ function PSO (particleFitness) {
   var particleCognitionLearning = 2.1
   var particleSocialLearning = 2.1
   var particleGlobalLearning = 1.1
-  var particleInertiaWeighting = 2 * 0.9 / (particleCognitionLearning + particleSocialLearning + particleGlobalLearning - 2)
+  var particleInertiaWeighting = 2 * 0.8 / (particleCognitionLearning + particleSocialLearning + particleGlobalLearning - 2)
+  debugLogger('BioArInEO-PSO evaluating new step') 
   var newStep = particleInertiaWeighting * particleStep + particleCognitionLearning * Math.random() * (particleBestPosition - particlePosition) + particleSocialLearning * Math.random() * (neighborsBestPosition - particlePosition) + particleGlobalLearning * Math.random() * (swarmBestPosition - particlePosition)
   if (newStep > maxStep) {
     newStep = maxStep
   } 
   theAccessory.context().put('particleStep', newStep)
   if (!(particleFitness > swarmBestFitness)) {
+    theAccessory.context().put('particleBestPosition', particlePosition)
     theAccessory.context().put('particleBestFitness', particleFitness)
+    swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestPosition', particlePosition)
     swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestFitness', particleFitness)
     swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestParticle', theGroup)
   } else if (!(particleFitness > particleBestFitness)) {
+    theAccessory.context().put('particleBestPosition', particlePosition)
     theAccessory.context().put('particleBestFitness', particleFitness)
   }
   if ((particlePosition + newStep) > parameterSearchRange[1]) {
@@ -519,7 +537,7 @@ function PSO (particleFitness) {
   } else {
     newPosition.push(particlePosition + newStep)
   }
-  theAccessory.context().put('particlePosition', newPosition)
   debugLogger('BioArInEO-PSO new step is ' + newStep + ' and position is ' + newPosition)
+  theServer.sendMail('PSO on ' + theGroup.getName() , 'INFO', ': new step is ' + newStep + ' and position is ' + newPosition) // Email notifications
   return newPosition
 }
