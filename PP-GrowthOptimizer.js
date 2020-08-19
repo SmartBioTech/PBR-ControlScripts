@@ -486,7 +486,7 @@ function PSO (particleFitness) {
   theAccessory.context().put('particlePosition', particlePosition)
   var particleBestPosition = Number(theAccessory.context().get('particleBestPosition', particlePosition))
   var particleBestFitness = theAccessory.context().get('particleBestFitness', particleFitness)
-  var particleStep = theAccessory.context().get('particleStep', 0.2 * parameterSearchRange[1] - parameterSearchRange[0]) // TODO change to multiparameter version
+  var particleStep = theAccessory.context().get('particleStep', 0.2 * (parameterSearchRange[1] - parameterSearchRange[0]) * Math.sign(getRandomOnInterval(-1, 1))) // TODO change to multiparameter version
   var maxStep = 5 // TODO adjust to multiparameter version, i.e. for each parameter reccommended limit (5 is for temperature)
   var swarmLeader = theServer.getGroupByName('DoAB-PBR01-group') // TODO add identifier from UserDefinedProtocol instead
   var swarmBestPosition = Number(swarmLeader.getAccessory('pumps.pump-5').context().get('swarmBestPosition', particlePosition))
