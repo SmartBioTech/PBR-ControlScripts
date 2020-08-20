@@ -342,7 +342,8 @@ function controlPump () {
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
     if (UserDefinedProtocol.particleSwarmOptimizer) {
       var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
-      stepDoublingTime = stepDoublingTime.length > 2 ? stepDoublingTime.reduce(getSumArrReduce, 0) / stepDoublingTime.length : stepDoublingTime[stepDoublingTime.length - 1]
+      var len = stepDoublingTime.length
+      stepDoublingTime = len > 2 ? stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
       controlParameter(UserDefinedProtocol.controlledParameter, PSO(stepDoublingTime))
       theAccessory.context().remove('stepCounter')
       theAccessory.context().remove('expDuration')
