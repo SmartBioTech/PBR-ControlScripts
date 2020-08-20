@@ -39,8 +39,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.3.2
- * @modified 19.8.2020 (JaCe)
+ * @version 3.3.3
+ * @modified 20.8.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -231,6 +231,9 @@ function debugLogger (message, status) {
     return null
   }
 }
+function getSumArrReduce(total, num) {
+  return total + num;
+}
 function controlParameter (parameter, values) {
   // Control accessory functions
   if ((parameter === undefined) || (parameter === 'none') || (values === undefined)) {
@@ -339,7 +342,8 @@ function controlPump () {
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
     if (UserDefinedProtocol.particleSwarmOptimizer) {
       var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
-      controlParameter(UserDefinedProtocol.controlledParameter, PSO(stepDoublingTime[stepDoublingTime.length - 1])) //TODO change to average of last n steps 
+      stepDoublingTime = stepDoublingTime.length > 2 ? stepDoublingTime.reduce(getSumArrReduce, 0) / stepDoublingTime.length : stepDoublingTime[stepDoublingTime.length - 1]
+      controlParameter(UserDefinedProtocol.controlledParameter, PSO(stepDoublingTime))
       theAccessory.context().remove('stepCounter')
       theAccessory.context().remove('expDuration')
       theAccessory.context().remove('stepDoublingTime')
@@ -480,10 +484,10 @@ function PSO (particleFitness) {
    * @return {array}         New parameters / conditions.          
    */
   debugLogger('BioArInEO-PSO executed') 
-  theAccessory.context().put('particleFitness', particleFitness)
+  theAccessory.context().put('particleLastFitness', particleFitness)
   var parameterSearchRange = [15, 35]
   var particlePosition = Number(theAccessory.context().get('particlePosition', UserDefinedProtocol.controlledParameterSteps[0])) //TODO multidimensional support
-  theAccessory.context().put('particlePosition', particlePosition)
+  theAccessory.context().put('particleLastPosition', particlePosition)
   var particleBestPosition = Number(theAccessory.context().get('particleBestPosition', particlePosition))
   var particleBestFitness = theAccessory.context().get('particleBestFitness', particleFitness)
   var particleStep = theAccessory.context().get('particleStep', 0.2 * (parameterSearchRange[1] - parameterSearchRange[0]) * (getRandomOnInterval(-1, 1) > 0 ? 1 : -1)) // ! PSI PBR JS doesn't support Math.sign()
@@ -497,8 +501,8 @@ function PSO (particleFitness) {
   var neighborsFitness = []
   var index, len
   for ( index = 0, len = neighborsList.length; index < len; ++index) {
-    neighborsPosition.push(theServer.getGroupByName(neighborsList[index]).getAccessory('pumps.pump-5').context().get('particlePosition', particlePosition));
-    neighborsFitness.push(theServer.getGroupByName(neighborsList[index]).getAccessory('pumps.pump-5').context().get('particleFitness', particleFitness))
+    neighborsPosition.push(theServer.getGroupByName(neighborsList[index]).getAccessory('pumps.pump-5').context().get('particleLastPosition', particlePosition));
+    neighborsFitness.push(theServer.getGroupByName(neighborsList[index]).getAccessory('pumps.pump-5').context().get('particleLastFitness', particleFitness))
   }
   var neighborsBestFitness = Math.min.apply(null, neighborsFitness)
   var neighborsBestPosition = Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness)])
@@ -511,8 +515,8 @@ function PSO (particleFitness) {
   // }
   // for i in range(len(Swarm.multiparametric_space)):
   var particleCognitionLearning = 2.1
-  var particleSocialLearning = 2.1
-  var particleGlobalLearning = 1.1
+  var particleSocialLearning = 1.1
+  var particleGlobalLearning = 1.6
   var particleInertiaWeighting = 2 * 0.8 / (particleCognitionLearning + particleSocialLearning + particleGlobalLearning - 2)
   debugLogger('BioArInEO-PSO evaluating new step') 
   var newStep = particleInertiaWeighting * particleStep + particleCognitionLearning * Math.random() * (particleBestPosition - particlePosition) + particleSocialLearning * Math.random() * (neighborsBestPosition - particlePosition) + particleGlobalLearning * Math.random() * (swarmBestPosition - particlePosition)
@@ -537,6 +541,7 @@ function PSO (particleFitness) {
   } else {
     newPosition.push(particlePosition + newStep)
   }
+  theAccessory.context().put('particlePosition', newPosition)
   debugLogger('BioArInEO-PSO new step is ' + newStep + ' and position is ' + newPosition)
   theServer.sendMail('PSO on ' + theGroup.getName() , 'INFO', ': new step is ' + newStep + ' and position is ' + newPosition) // Email notifications
   return newPosition
