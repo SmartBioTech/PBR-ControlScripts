@@ -251,6 +251,7 @@ function controlParameter (parameter, values) {
       var light0 = theGroup.getAccessory('actinic-lights.light-Red')
       var light1 = theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue'))
       unit = ' uE'
+      values = Array(values, values)
       light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
       light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue || White
       debugLogger('Lights changed. Channel 0 set to ' + round(values[0], 0) + unit + ' and channel 1 set to ' + round(values[1], 0) + unit)
@@ -280,10 +281,19 @@ function controlParameter (parameter, values) {
       unit = ' ml/min'
       valve0.setRunningProtoConfig(new ProtoConfig(Number(values[0])))
       valve1.setRunningProtoConfig(new ProtoConfig(Number(values[1])))
-      var flowAir = valve0.getProtoConfigValue()
-      var flowCO2 = valve1.getProtoConfigValue()
+      var flowCO2 = valve0.getProtoConfigValue()
+      var flowAir = valve1.getProtoConfigValue()
       debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 0) + unit + ' and CO2 flow ' + round(flowCO2, 1) + unit + ' (' + round((flowCO2 / (flowCO2 + flowAir) + 395 / 1e6) * 100, 1) + '%)')
       break
+      case 'GMS-CO2':
+        var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
+        var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
+        unit = ' ml/min'
+        valve0.setRunningProtoConfig(new ProtoConfig(Number(values)))
+        var flowCO2 = valve0.getProtoConfigValue()
+        var flowAir = valve1.getProtoConfigValue()
+        debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 0) + unit + ' and CO2 flow ' + round(flowCO2, 1) + unit + ' (' + round((flowCO2 / (flowCO2 + flowAir) + 395 / 1e6) * 100, 1) + '%)')
+        break
     case 'stirrer':
       var stirrer = theGroup.getAccessory('pwm.stirrer')
       unit = '%'
@@ -571,7 +581,7 @@ function PSO (particleFitness) {
     } else {
       newPosition.push(particlePosition[index] + newStep[index])
     }
-    controlParameter(UserDefinedProtocol.controlledParameters[index], newPosition[index])
+    controlParameter(UserDefinedProtocol.controlledParameters[index], round(newPosition[index], 2))
   }
   if (!(particleFitness > swarmBestFitness)) {
     theAccessory.context().put('particleBestPosition', particlePosition)
@@ -588,5 +598,5 @@ function PSO (particleFitness) {
   debugLogger('BioArInEO-PSO best swarm position is [ ' + swarmBestPosition + ' ] with fitness ' + swarmBestFitness)
   debugLogger('BioArInEO-PSO best neighbors position is [ ' + neighborsBestPosition + ' ] with fitness ' + neighborsBestFitness[0])
   debugLogger('BioArInEO-PSO new step is [ ' + newStep + ' ] and position is [ ' + newPosition + ' ]')
-  theServer.sendMail('PSO on ' + theGroup.getName() , 'NONE', ': new step is [ ' + newStep + ' ] and position is [ ' + newPosition + ' ]') // Email notifications
+  theServer.sendMail('PSO on ' + theGroup.getName() , 'NONE', ': for fitness ' + particleFitness + ' new step is [ ' + newStep + ' ] and position is [ ' + newPosition + ' ]') // Email notifications
 }
