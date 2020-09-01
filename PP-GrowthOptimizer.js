@@ -165,6 +165,10 @@ if (!theAccessory.context().getInt('initiated', 0)) {
       }
       theAccessory.context().put('OD7XYString', OD7XYString)
     }
+    if (UserDefinedProtocol.turbidostatODMin > UserDefinedProtocol.turbidostatODMax) {
+      debugLogger('OD range reversed.')
+      theExperiment.addEvent('OD range set in reversed order - will be automatically corrected.')
+    }
     controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0])
     theAccessory.context().put('initiated', 1)
     debugLogger('Peristaltic Pump - Growth Optimizer initialization successful.')
@@ -365,15 +369,14 @@ function controlPump () {
   // Check for reversed OD range
   if (UserDefinedProtocol.turbidostatODMin > UserDefinedProtocol.turbidostatODMax) {
     UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
-    debugLogger('OD range reversed.', 0)
   }
   if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (stepCounter !== 0)) {
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600) // TODO allocate var for getDurationSec
     if (UserDefinedProtocol.particleSwarmOptimizer) {
       var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
       var len = stepDoublingTime.length
-      stepDoublingTime = len > 2 ? stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
-      PSO(stepDoublingTime)
+      var stepDoublingTimeAvg = len > 2 ? len > UserDefinedProtocol.analyzedSteps ? stepDoublingTime.slice(len - UserDefinedProtocol.analyzedSteps, len).reduce(getSumArrReduce, 0) / (UserDefinedProtocol.analyzedSteps) : stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
+      PSO(stepDoublingTimeAvg)
       theAccessory.context().remove('stepCounter')
       theAccessory.context().remove('expDuration')
       theAccessory.context().remove('stepDoublingTime')
@@ -533,7 +536,6 @@ function PSO (particleFitness) {
     temporaryTest = true
     particleStep = []
   }
-  var maxStep = []
   var neighborsBestPosition = []
   var neighborsBestFitness = []
   var newPosition = []
@@ -554,8 +556,7 @@ function PSO (particleFitness) {
       particleStep.push(0.2 * (parametersSearchRange[1] - parametersSearchRange[0]) * (getRandomOnInterval(-1, 1) > 0 ? 1 : -1)) // ! PSI PBR JS doesn't support Math.sign()
     }
     debugLogger('BioArInEO-PSO particle step is ' + particleStep[index]) 
-    maxStep.push(Number(UserDefinedProtocol.parametersMaxStep[index]))
-    debugLogger('BioArInEO-PSO particle max step is ' + maxStep[index])
+    debugLogger('BioArInEO-PSO particle max step is ' + UserDefinedProtocol.parametersMaxStep[index])
     for (var indexN = 0, lenN = neighborsList.length; indexN < lenN; ++indexN) {
       temporaryNeighborPosition = theServer.getGroupByName(neighborsList[indexN]).getAccessory('pumps.pump-5').context().get('particleLastPosition', undefined)
       neighborsPosition = []
@@ -571,13 +572,13 @@ function PSO (particleFitness) {
     neighborsBestPosition.push(Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness[index])]))
     debugLogger('BioArInEO-PSO neighbors best position is [ ' + neighborsBestPosition[index] + '] with fitness ' + neighborsBestFitness[index])
     newStep.push(particleInertiaWeighting * particleStep[index] + particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) + particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index]) + particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index]))
-    if (Math.abs(newStep[index]) > maxStep[index]) {
-      newStep[index] = maxStep[index] * (newStep[index] > 0 ? 1 : -1)
+    if (Math.abs(newStep[index]) > Number(UserDefinedProtocol.parametersMaxStep[index])) {
+      newStep[index] = Number(UserDefinedProtocol.parametersMaxStep[index]) * (newStep[index] > 0 ? 1 : -1)
     }
-    if ((particlePosition[index] + newStep[index]) > UserDefinedProtocol.parametersSearchRange[1]) {
-      newPosition.push(UserDefinedProtocol.parametersSearchRange[1])
-    } else if ((particlePosition[index] + newStep[index]) < UserDefinedProtocol.parametersSearchRange[0]) {
-      newPosition.push(UserDefinedProtocol.parametersSearchRange[0])
+    if ((particlePosition[index] + newStep[index]) > parametersSearchRange[1]) {
+      newPosition.push(parametersSearchRange[1])
+    } else if ((particlePosition[index] + newStep[index]) < parametersSearchRange[0]) {
+      newPosition.push(parametersSearchRange[0])
     } else {
       newPosition.push(particlePosition[index] + newStep[index])
     }
