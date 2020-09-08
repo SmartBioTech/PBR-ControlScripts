@@ -255,7 +255,6 @@ function controlParameter (parameter, values) {
       var light0 = theGroup.getAccessory('actinic-lights.light-Red')
       var light1 = theGroup.getAccessory(theAccessory.context().get('light1String', 'actinic-lights.light-Blue'))
       unit = ' uE'
-      values = Array(values, values)
       light0.setRunningProtoConfig(new ProtoConfig(Number(values[0]))) // Red
       light1.setRunningProtoConfig(new ProtoConfig(Number(values[1]))) // Blue || White
       debugLogger('Lights changed. Channel 0 set to ' + round(values[0], 0) + unit + ' and channel 1 set to ' + round(values[1], 0) + unit)
@@ -370,17 +369,13 @@ function controlPump () {
   if (UserDefinedProtocol.turbidostatODMin > UserDefinedProtocol.turbidostatODMax) {
     UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
   }
-  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && (stepCounter !== 0)) {
+  if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && !pumpState) {
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600) // TODO allocate var for getDurationSec
+    var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
     if (UserDefinedProtocol.particleSwarmOptimizer) {
-      var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
       var len = stepDoublingTime.length
       var stepDoublingTimeAvg = len > 2 ? len > UserDefinedProtocol.analyzedSteps ? stepDoublingTime.slice(len - UserDefinedProtocol.analyzedSteps, len).reduce(getSumArrReduce, 0) / (UserDefinedProtocol.analyzedSteps) : stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
       PSO(stepDoublingTimeAvg)
-      theAccessory.context().remove('stepCounter')
-      theAccessory.context().remove('expDuration')
-      theAccessory.context().remove('stepDoublingTime')
-      theAccessory.context().remove('stabilizedTime')
     } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
       if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
         controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
@@ -392,11 +387,11 @@ function controlPump () {
         controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
         theAccessory.context().put('changeCounter', 1)
       }
-      theAccessory.context().remove('stepCounter')
-      theAccessory.context().remove('expDuration')
-      theAccessory.context().remove('stepDoublingTime')
-      theAccessory.context().remove('stabilizedTime')
-    }  
+    } 
+    theAccessory.context().remove('stepCounter')
+    theAccessory.context().remove('expDuration')
+    theAccessory.context().remove('stepDoublingTime')
+    theAccessory.context().remove('stabilizedTime')
   }
   // Start step growth rate evaluation
   if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
