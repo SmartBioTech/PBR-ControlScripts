@@ -5,9 +5,9 @@ var UserDefinedProtocol = {
   turbidostatODType: 720,
   ODReadoutInterval: 60,
   // -optimizer parameters
-  controlledParameter: 'temperature',
+  controlledParameter: 'none',
   controlledParameterSteps: [ 28 ],
-  particleSwarmOptimizer: true,
+  particleSwarmOptimizer: false,
   controlledParameters: [ 'temperature' ],
   controlledParametersIC: [ 28 ],
   parametersSearchRange: [ 18, 38 ],
@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.4.1
- * @modified 24.8.2020 (JaCe)
+ * @version 3.4.2
+ * @modified 10.9.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -99,6 +99,7 @@ importPackage(Packages.psi.bioreactor.core.regression)
 if (!theAccessory.context().getInt('initiated', 0)) {
   try {
     theAccessory.context().clear()
+    theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
     theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
     var light1String
     if (theGroup.getAccessory('actinic-lights.light-Blue') === null) {
@@ -475,6 +476,7 @@ function controlPump () {
               controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
               theAccessory.context().put('changeCounter', 1)
             }
+            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position') // Email notifications
           }
           theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
           theAccessory.context().remove('stepCounter')
