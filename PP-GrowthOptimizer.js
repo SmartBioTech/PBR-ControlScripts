@@ -525,6 +525,7 @@ function PSO (particleFitness) {
   var swarmLeader = theServer.getGroupByName(UserDefinedProtocol.swarmLeaderGroup)
   var swarmBestPosition = swarmLeader.getAccessory('pumps.pump-5').context().get('swarmBestPosition', particlePosition)
   var swarmBestFitness = swarmLeader.getAccessory('pumps.pump-5').context().get('swarmBestFitness', particleFitness)
+  var swarmBestParticle = swarmLeader.getAccessory('pumps.pump-5').context().get('swarmBestParticle', undefined)
   var neighborsList = UserDefinedProtocol.particleNeighborsGroupList
   var parametersSearchRange = UserDefinedProtocol.parametersSearchRange
   var particleStep =  theAccessory.context().get('particleStep', undefined)
@@ -567,7 +568,7 @@ function PSO (particleFitness) {
     }
     neighborsBestFitness.push(Math.min.apply(null, neighborsFitness))
     neighborsBestPosition.push(Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness[index])]))
-    debugLogger('BioArInEO-PSO neighbors best position is [ ' + neighborsBestPosition[index] + '] with fitness ' + neighborsBestFitness[index])
+    debugLogger('BioArInEO-PSO neighbors best position is [ ' + neighborsBestPosition[index] + ' ] with fitness ' + neighborsBestFitness[index])
     newStep.push(particleInertiaWeighting * particleStep[index] + particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) + particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index]) + particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index]))
     if (Math.abs(newStep[index]) > Number(UserDefinedProtocol.parametersMaxStep[index])) {
       newStep[index] = Number(UserDefinedProtocol.parametersMaxStep[index]) * (newStep[index] > 0 ? 1 : -1)
@@ -586,7 +587,8 @@ function PSO (particleFitness) {
     theAccessory.context().put('particleBestFitness', particleFitness)
     swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestPosition', particlePosition)
     swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestFitness', particleFitness)
-    swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestParticle', theGroup)
+    swarmBestParticle = theGroup
+    swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestParticle', swarmBestParticle)
   } else if (!(particleFitness > particleBestFitness)) {
     theAccessory.context().put('particleBestPosition', particlePosition)
     theAccessory.context().put('particleBestFitness', particleFitness)
@@ -594,6 +596,7 @@ function PSO (particleFitness) {
   theAccessory.context().put('particleStep', newStep)
   theAccessory.context().put('particlePosition', newPosition)
   debugLogger('BioArInEO-PSO best swarm position is [ ' + swarmBestPosition + ' ] with fitness ' + swarmBestFitness)
+  debugLogger('BioArInEO-PSO best swarm particle is ' + swarmBestParticle)
   debugLogger('BioArInEO-PSO best neighbors position is [ ' + neighborsBestPosition + ' ] with fitness ' + neighborsBestFitness[0])
   debugLogger('BioArInEO-PSO new step is [ ' + newStep + ' ] and position is [ ' + newPosition + ' ]')
   theServer.sendMail('PSO on ' + theGroup.getName() , 'NONE', ': for fitness ' + particleFitness + ' new step is [ ' + newStep + ' ] and position is [ ' + newPosition + ' ]') // Email notifications
