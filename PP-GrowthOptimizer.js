@@ -445,7 +445,7 @@ function controlPump () {
         for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
           stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
         }
-        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / UserDefinedProtocol.analyzedSteps)
+        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / (UserDefinedProtocol.analyzedSteps - 1))
         stepDoublingTimeIC95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps) * 1.96
         // Trend of steps doubling time
         for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
