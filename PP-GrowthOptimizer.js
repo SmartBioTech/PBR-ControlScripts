@@ -54,8 +54,8 @@ var UserDefinedProtocol = {
  * @param {string} controlledParameter ['none'/'temperature'/'lights'/'GMS'/'stirrer'/'ODRange'] - Supported parameters to control by the script
  * @param {array} controlledParameterSteps - List of values for the controlled parameter. Examples:
  *                temperature = [ 28, 32, 34, 30, 26, 22 ]; // [oC]
- *                lights = [[ 55, 25 ],[ 110, 25 ],[ 220, 25 ],[ 440, 25 ],[ 880,25 ]]; // [uE]
- *                GMS = [[ 195.88, 5.873 ],[ 195.88, 12.478 ],[ 185.30, 18.257 ],[ 185.30,25.274 ]]; // [ml/min]
+ *                lights = [[ 55, 25 ], [ 110, 25 ], [ 220, 25 ], [ 440, 25 ], [ 880,25 ]]; // [uE]
+ *                GMS = [[ 9.6, 990 ], [ 19.6, 1880 ], [ 39.6, 1940 ]]; // [ml/min]
  *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
  *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
  * -optimizer stability check
