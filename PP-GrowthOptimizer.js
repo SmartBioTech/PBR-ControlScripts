@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.4.2
- * @modified 10.9.2020 (JaCe)
+ * @version 3.4.3
+ * @modified 7.10.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -121,6 +121,21 @@ if (!theAccessory.context().getInt('initiated', 0)) {
           theExperiment.addEvent('!!! Disable WHITE LIGHT protocol')
         }
         break
+      case 'light-red':
+        if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
+          theExperiment.addEvent('!!! Disable RED LIGHT protocol')
+        }
+        break
+      case 'light-blue':
+        if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+          theExperiment.addEvent('!!! Disable RED LIGHT protocol')
+        }
+        break
+      case 'light-white':
+        if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+          theExperiment.addEvent('!!! Disable RED LIGHT protocol')
+        }
+        break
       case 'temperature':
         if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
           theExperiment.addEvent('!!! Disable THERMOREGULATOR protocol')
@@ -134,6 +149,11 @@ if (!theAccessory.context().getInt('initiated', 0)) {
           theExperiment.addEvent('!!! Disable GMS Air/N2 protocol')
         }
         break
+      case 'GMS-CO2':
+        if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
+          theExperiment.addEvent('!!! Disable GMS CO2 protocol')
+        } 
+        break     
       case 'stirrer':
         if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
           theExperiment.addEvent('!!! Disable STIRRER protocol')
@@ -289,7 +309,7 @@ function controlParameter (parameter, values) {
       var flowAir = valve1.getProtoConfigValue()
       debugLogger('GMS settings changed. Gas Mixing set to Air flow ' + round(flowAir, 0) + unit + ' and CO2 flow ' + round(flowCO2, 1) + unit + ' (' + round((flowCO2 / (flowCO2 + flowAir) + 395 / 1e6) * 100, 1) + '%)')
       break
-      case 'GMS-CO2':
+    case 'GMS-CO2':
         var valve0 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg') // CO2
         var valve1 = UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg') // Air
         unit = ' ml/min'
