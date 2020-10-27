@@ -539,7 +539,7 @@ function PSO (particleFitness) {
   }
   theAccessory.context().put('particleLastFitness', particleFitness)
   var particlePosition = theAccessory.context().get('particlePosition', UserDefinedProtocol.controlledParametersIC)
-  debugLogger('BioArInEO-PSO executed with fitness ' + particleFitness + ' and position [ ' + particlePosition + ' ]') 
+  debugLogger('BioArInEO-PSO executed with fitness ' + particleFitness.toFixed(2) + ' and position [ ' + particlePosition.map(function(ae){return ae.toFixed(2)}) + ' ]') 
   theAccessory.context().put('particleLastPosition', particlePosition)
   var particleBestPosition = theAccessory.context().get('particleBestPosition', particlePosition)
   var particleBestFitness = theAccessory.context().get('particleBestFitness', particleFitness)
@@ -573,7 +573,7 @@ function PSO (particleFitness) {
     if (temporaryTest) {
       particleStep.push(0.2 * (parametersSearchRange[1] - parametersSearchRange[0]) * (getRandomOnInterval(-1, 1) > 0 ? 1 : -1)) // ! PSI PBR JS doesn't support Math.sign()
     }
-    debugLogger('BioArInEO-PSO particle step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + particleStep[index] + ' (max ' + UserDefinedProtocol.parametersMaxStep[index] + ' )') 
+    debugLogger('BioArInEO-PSO particle step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + particleStep[index].toFixed(2) + ' (max ' + UserDefinedProtocol.parametersMaxStep[index].toFixed(2) + ' )') 
     for (var indexN = 0, lenN = neighborsList.length; indexN < lenN; ++indexN) {
       temporaryNeighborPosition = theServer.getGroupByName(neighborsList[indexN]).getAccessory('pumps.pump-5').context().get('particleLastPosition', undefined)
       neighborsPosition = []
@@ -587,9 +587,9 @@ function PSO (particleFitness) {
     }
     neighborsBestFitness.push(Math.min.apply(null, neighborsFitness))
     neighborsBestPosition.push(Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness[index])]))
-    debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + neighborsBestPosition[index] + ' with fitness ' + neighborsBestFitness[index])
+    debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + neighborsBestPosition[index].toFixed(2) + ' with fitness ' + neighborsBestFitness[index].toFixed(2))
     newStep.push(particleInertiaWeighting * particleStep[index] + particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) + particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index]) + particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index]))
-    debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index])
+    debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index].toFixed(2))
     if (Math.abs(newStep[index]) > Number(UserDefinedProtocol.parametersMaxStep[index])) {
       newStep[index] = Number(UserDefinedProtocol.parametersMaxStep[index]) * (newStep[index] > 0 ? 1 : -1)
     }
@@ -615,9 +615,9 @@ function PSO (particleFitness) {
   }
   theAccessory.context().put('particleStep', newStep)
   theAccessory.context().put('particlePosition', newPosition)
-  debugLogger('BioArInEO-PSO best swarm position is [ ' + swarmBestPosition + ' ] with fitness ' + swarmBestFitness)
+  debugLogger('BioArInEO-PSO best swarm position is [ ' + swarmBestPosition.map(function(ae){return ae.toFixed(2)}) + ' ] with fitness ' + swarmBestFitness.toFixed(2))
   debugLogger('BioArInEO-PSO best swarm particle is ' + swarmBestParticle)
-  debugLogger('BioArInEO-PSO best neighbors position is [ ' + neighborsBestPosition + ' ] with fitness ' + neighborsBestFitness[0])
-  debugLogger('BioArInEO-PSO new step is [ ' + newStep + ' ] and position is [ ' + newPosition + ' ]')
-  theServer.sendMail('PSO on ' + theGroup.getName() , 'NONE', ': for fitness ' + particleFitness + ' new step is [ ' + newStep + ' ] and position is [ ' + newPosition + ' ]') // Email notifications
+  debugLogger('BioArInEO-PSO best neighbors position is [ ' + neighborsBestPosition.map(function(ae){return ae.toFixed(2)}) + ' ] with fitness ' + neighborsBestFitness[0].toFixed(2))
+  debugLogger('BioArInEO-PSO new step is [ ' + newStep.map(function(ae){return ae.toFixed(2)}) + ' ] and position is [ ' + newPosition.map(function(ae){return ae.toFixed(2)}) + ' ]')
+  theServer.sendMail('PSO on ' + theGroup.getName() , 'NONE', ': for fitness ' + particleFitness.toFixed(2) + ' new step is [ ' + newStep.toFixed(2) + ' ] and position is [ ' + newPosition.map(function(ae){return ae.toFixed(2)}) + ' ]') // Email notifications
 }
