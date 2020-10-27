@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.4.4
- * @modified 23.10.2020 (JaCe)
+ * @version 3.4.5
+ * @modified 26.10.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -456,6 +456,7 @@ function controlPump () {
         var sumY = 0
         var sumX2 = 0
         // var sumY2 = 0
+        // TODO if trend then accumulate steps as [analyzedSteps inf]
         // Average of steps doubling time
         for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
           stepDoublingTimeAvg += Number(stepDoublingTime[i])
@@ -538,7 +539,7 @@ function PSO (particleFitness) {
   }
   theAccessory.context().put('particleLastFitness', particleFitness)
   var particlePosition = theAccessory.context().get('particlePosition', UserDefinedProtocol.controlledParametersIC)
-  debugLogger('BioArInEO-PSO executed with fitness ' + particleFitness + ' and position ' + particlePosition) 
+  debugLogger('BioArInEO-PSO executed with fitness ' + particleFitness + ' and position [ ' + particlePosition + ' ]') 
   theAccessory.context().put('particleLastPosition', particlePosition)
   var particleBestPosition = theAccessory.context().get('particleBestPosition', particlePosition)
   var particleBestFitness = theAccessory.context().get('particleBestFitness', particleFitness)
@@ -566,15 +567,13 @@ function PSO (particleFitness) {
   var neighborsPosition = []
   var neighborsFitness = []
   for (var index = 0, len = UserDefinedProtocol.controlledParameters.length; index < len; index++) {
-    debugLogger('BioArInEO-PSO evaluating new step for ' + UserDefinedProtocol.controlledParameters[index]) 
     if (len > 1) {
       parametersSearchRange = UserDefinedProtocol.parametersSearchRange[index]
     }
     if (temporaryTest) {
       particleStep.push(0.2 * (parametersSearchRange[1] - parametersSearchRange[0]) * (getRandomOnInterval(-1, 1) > 0 ? 1 : -1)) // ! PSI PBR JS doesn't support Math.sign()
     }
-    debugLogger('BioArInEO-PSO particle step is ' + particleStep[index]) 
-    debugLogger('BioArInEO-PSO particle max step is ' + UserDefinedProtocol.parametersMaxStep[index])
+    debugLogger('BioArInEO-PSO particle step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + particleStep[index] + ' (max ' + UserDefinedProtocol.parametersMaxStep[index] + ' )') 
     for (var indexN = 0, lenN = neighborsList.length; indexN < lenN; ++indexN) {
       temporaryNeighborPosition = theServer.getGroupByName(neighborsList[indexN]).getAccessory('pumps.pump-5').context().get('particleLastPosition', undefined)
       neighborsPosition = []
@@ -588,9 +587,9 @@ function PSO (particleFitness) {
     }
     neighborsBestFitness.push(Math.min.apply(null, neighborsFitness))
     neighborsBestPosition.push(Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness[index])]))
-    debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is [ ' + neighborsBestPosition[index] + ' ] with fitness ' + neighborsBestFitness[index])
+    debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + neighborsBestPosition[index] + ' with fitness ' + neighborsBestFitness[index])
     newStep.push(particleInertiaWeighting * particleStep[index] + particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) + particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index]) + particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index]))
-    debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is [ ' + newStep[index] + ' ]')
+    debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index])
     if (Math.abs(newStep[index]) > Number(UserDefinedProtocol.parametersMaxStep[index])) {
       newStep[index] = Number(UserDefinedProtocol.parametersMaxStep[index]) * (newStep[index] > 0 ? 1 : -1)
     }
