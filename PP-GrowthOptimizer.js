@@ -619,5 +619,5 @@ function PSO (particleFitness) {
   debugLogger('BioArInEO-PSO best swarm particle is ' + swarmBestParticle)
   debugLogger('BioArInEO-PSO best neighbors position is [ ' + neighborsBestPosition.map(function(ae){return ae.toFixed(2)}) + ' ] with fitness ' + neighborsBestFitness[0].toFixed(2))
   debugLogger('BioArInEO-PSO new step is [ ' + newStep.map(function(ae){return ae.toFixed(2)}) + ' ] and position is [ ' + newPosition.map(function(ae){return ae.toFixed(2)}) + ' ]')
-  theServer.sendMail('PSO on ' + theGroup.getName() , 'NONE', ': for fitness ' + particleFitness.toFixed(2) + ' new step is [ ' + newStep.toFixed(2) + ' ] and position is [ ' + newPosition.map(function(ae){return ae.toFixed(2)}) + ' ]') // Email notifications
+  theServer.sendMail('PSO on ' + theGroup.getName() , 'NONE', ': for fitness ' + particleFitness.toFixed(2) + ' new step is [ ' + newStep.map(function(ae){return ae.toFixed(2)}) + ' ] and position is [ ' + newPosition.map(function(ae){return ae.toFixed(2)}) + ' ]') // Email notifications
 }
