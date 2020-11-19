@@ -564,9 +564,11 @@ function PSO (particleFitness) {
   var particleGlobalLearning = 1.6
   var particleInertiaWeighting = 2 * 0.8 / (particleCognitionLearning + particleSocialLearning + particleGlobalLearning - 2)
   var temporaryNeighborPosition
-  var neighborsPosition = []
-  var neighborsFitness = []
+  var neighborsPosition
+  var neighborsFitness
   for (var index = 0, len = UserDefinedProtocol.controlledParameters.length; index < len; index++) {
+    neighborsPosition = []
+    neighborsFitness = []
     if (len > 1) {
       parametersSearchRange = UserDefinedProtocol.parametersSearchRange[index]
     }
@@ -576,8 +578,6 @@ function PSO (particleFitness) {
     debugLogger('BioArInEO-PSO particle step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + particleStep[index].toFixed(2) + ' (max ' + UserDefinedProtocol.parametersMaxStep[index].toFixed(2) + ' )') 
     for (var indexN = 0, lenN = neighborsList.length; indexN < lenN; ++indexN) {
       temporaryNeighborPosition = theServer.getGroupByName(neighborsList[indexN]).getAccessory('pumps.pump-5').context().get('particleLastPosition', undefined)
-      neighborsPosition = []
-      neighborsFitness = []
       if (temporaryNeighborPosition === undefined) {
         neighborsPosition.push(particlePosition[index])
       } else {
@@ -587,9 +587,13 @@ function PSO (particleFitness) {
     }
     neighborsBestFitness.push(Math.min.apply(null, neighborsFitness))
     neighborsBestPosition.push(Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness[index])]))
-    debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + neighborsBestPosition[index].toFixed(2) + ' with fitness ' + neighborsBestFitness[index].toFixed(2))
-    newStep.push(particleInertiaWeighting * particleStep[index] + particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) + particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index]) + particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index]))
-    debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index].toFixed(2))
+    //debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + neighborsBestPosition[index].toFixed(2) + ' with fitness ' + neighborsBestFitness[index].toFixed(2))
+    // PSO steps for debugging
+    var cognitionPart = particleFitness > particleBestFitness ? particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) : 0
+    var socialPart = particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index])
+    var globalPart = particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index])
+    newStep.push(particleInertiaWeighting * particleStep[index] + cognitionPart + socialPart + globalPart)
+    //debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index].toFixed(2) + 'with [ ' + Array(cognitionPart,socialPart,globalPart).toString() + ' ]')
     if (Math.abs(newStep[index]) > Number(UserDefinedProtocol.parametersMaxStep[index])) {
       newStep[index] = Number(UserDefinedProtocol.parametersMaxStep[index]) * (newStep[index] > 0 ? 1 : -1)
     }
