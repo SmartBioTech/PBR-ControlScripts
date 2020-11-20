@@ -575,7 +575,7 @@ function PSO (particleFitness) {
     if (temporaryTest) {
       particleStep.push(0.2 * (parametersSearchRange[1] - parametersSearchRange[0]) * (getRandomOnInterval(-1, 1) > 0 ? 1 : -1)) // ! PSI PBR JS doesn't support Math.sign()
     }
-    debugLogger('BioArInEO-PSO particle step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + particleStep[index].toFixed(2) + ' (max ' + UserDefinedProtocol.parametersMaxStep[index].toFixed(2) + ' )') 
+    debugLogger('BioArInEO-PSO particle step for ' + UserDefinedProtocol.controlledParameters[index] + ' was ' + particleStep[index].toFixed(2) + ' (|max| ' + UserDefinedProtocol.parametersMaxStep[index].toFixed(2) + ' )') 
     for (var indexN = 0, lenN = neighborsList.length; indexN < lenN; ++indexN) {
       temporaryNeighborPosition = theServer.getGroupByName(neighborsList[indexN]).getAccessory('pumps.pump-5').context().get('particleLastPosition', undefined)
       if (temporaryNeighborPosition === undefined) {
@@ -607,11 +607,12 @@ function PSO (particleFitness) {
     controlParameter(UserDefinedProtocol.controlledParameters[index], round(newPosition[index], 2))
   }
   if (!(particleFitness > swarmBestFitness)) {
+    swarmBestPosition = particlePosition
+    swarmBestFitness = particleFitness
     theAccessory.context().put('particleBestPosition', particlePosition)
     theAccessory.context().put('particleBestFitness', particleFitness)
-    swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestPosition', particlePosition)
-    swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestFitness', particleFitness)
-    swarmBestParticle = theGroup
+    swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestPosition', swarmBestPosition)
+    swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestFitness', swarmBestFitness)
     swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestParticle', swarmBestParticle)
   } else if (!(particleFitness > particleBestFitness)) {
     theAccessory.context().put('particleBestPosition', particlePosition)
