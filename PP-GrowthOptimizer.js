@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.4.5
- * @modified 26.10.2020 (JaCe)
+ * @version 3.4.6
+ * @modified 20.11.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -497,7 +497,8 @@ function controlPump () {
               controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
               theAccessory.context().put('changeCounter', 1)
             }
-            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position') // Email notifications
+            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' and position [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') 
+            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') // Email notification
           }
           theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
           theAccessory.context().remove('stepCounter')
@@ -593,7 +594,7 @@ function PSO (particleFitness) {
     var socialPart = particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index])
     var globalPart = particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index])
     newStep.push(particleInertiaWeighting * particleStep[index] + cognitionPart + socialPart + globalPart)
-    //debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index].toFixed(2) + 'with [ ' + Array(cognitionPart,socialPart,globalPart).toString() + ' ]')
+    debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index].toFixed(2) + ' with [ ' + Array(cognitionPart.toFixed(2),socialPart.toFixed(2),globalPart.toFixed(2)).toString() + ' ]')
     if (Math.abs(newStep[index]) > Number(UserDefinedProtocol.parametersMaxStep[index])) {
       newStep[index] = Number(UserDefinedProtocol.parametersMaxStep[index]) * (newStep[index] > 0 ? 1 : -1)
     }
@@ -609,6 +610,7 @@ function PSO (particleFitness) {
   if (!(particleFitness > swarmBestFitness)) {
     swarmBestPosition = particlePosition
     swarmBestFitness = particleFitness
+    swarmBestParticle = theGroup
     theAccessory.context().put('particleBestPosition', particlePosition)
     theAccessory.context().put('particleBestFitness', particleFitness)
     swarmLeader.getAccessory('pumps.pump-5').context().put('swarmBestPosition', swarmBestPosition)
