@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.4.6
- * @modified 20.11.2020 (JaCe)
+ * @version 3.4.8
+ * @modified 2.12.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -497,7 +497,7 @@ function controlPump () {
               controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
               theAccessory.context().put('changeCounter', 1)
             }
-            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' and position [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') 
+            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' and new position is [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') 
             theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') // Email notification
           }
           theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
@@ -590,7 +590,7 @@ function PSO (particleFitness) {
     neighborsBestPosition.push(Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness[index])]))
     //debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + neighborsBestPosition[index].toFixed(2) + ' with fitness ' + neighborsBestFitness[index].toFixed(2))
     // PSO steps for debugging
-    var cognitionPart = particleFitness > particleBestFitness ? particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) : 0
+    var cognitionPart = !(particleFitness < particleBestFitness) ? particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) : 0
     var socialPart = particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index])
     var globalPart = particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index])
     newStep.push(particleInertiaWeighting * particleStep[index] + cognitionPart + socialPart + globalPart)
