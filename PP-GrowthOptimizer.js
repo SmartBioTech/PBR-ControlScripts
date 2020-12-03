@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.4.8
- * @modified 2.12.2020 (JaCe)
+ * @version 3.4.9
+ * @modified 3.12.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -590,9 +590,9 @@ function PSO (particleFitness) {
     neighborsBestPosition.push(Number(neighborsPosition[neighborsFitness.indexOf(neighborsBestFitness[index])]))
     //debugLogger('BioArInEO-PSO neighbors best position for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + neighborsBestPosition[index].toFixed(2) + ' with fitness ' + neighborsBestFitness[index].toFixed(2))
     // PSO steps for debugging
-    var cognitionPart = !(particleFitness < particleBestFitness) ? particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) : 0
-    var socialPart = particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index])
-    var globalPart = particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index])
+    var cognitionPart = particleFitness > particleBestFitness ? particleCognitionLearning * Math.random() * (particleBestPosition[index] - particlePosition[index]) : 0
+    var socialPart = particleFitness > neighborsBestFitness[index] ? particleSocialLearning * Math.random() * (neighborsBestPosition[index] - particlePosition[index]) : 0
+    var globalPart = particleFitness > swarmBestFitness ? particleGlobalLearning * Math.random() * (swarmBestPosition[index] - particlePosition[index]) : 0
     newStep.push(particleInertiaWeighting * particleStep[index] + cognitionPart + socialPart + globalPart)
     debugLogger('BioArInEO-PSO new uncorrected step for ' + UserDefinedProtocol.controlledParameters[index] + ' is ' + newStep[index].toFixed(2) + ' with [ ' + Array(cognitionPart.toFixed(2),socialPart.toFixed(2),globalPart.toFixed(2)).toString() + ' ]')
     if (Math.abs(newStep[index]) > Number(UserDefinedProtocol.parametersMaxStep[index])) {
