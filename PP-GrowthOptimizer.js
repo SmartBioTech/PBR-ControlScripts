@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.4.9
- * @modified 3.12.2020 (JaCe)
+ * @version 3.5.0
+ * @modified 4.12.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -430,8 +430,8 @@ function controlPump () {
       theAccessory.context().put('expDuration', expDuration)
       theAccessory.context().put('stepDuration', stepDuration)
       theAccessory.context().put('stepDoublingTime', stepDoublingTime)
-      theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
-      theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
+      // theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
+      // theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
       odSensorRegression.getDataHistory().setCapacity(600)
     }
     expDuration[stepCounter] = theExperiment.getDurationSec()
@@ -500,6 +500,7 @@ function controlPump () {
             debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' and new position is [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') 
             theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') // Email notification
           }
+          theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
           theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
           theAccessory.context().remove('stepCounter')
           theAccessory.context().remove('expDuration')
