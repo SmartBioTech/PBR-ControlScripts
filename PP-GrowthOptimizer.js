@@ -336,7 +336,7 @@ function controlParameter (parameter, values) {
   theAccessory.context().put('controlledParameterText', parameter + ' ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + ' changed to ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
 }
-function changeParameter(parameter,direction) {
+function changeParameter(parameter, direction) {
   if ((parameter === undefined) || (parameter === 'none')) {
     return null
   }
@@ -365,6 +365,7 @@ function changeParameter(parameter,direction) {
       break;
     default:
   }
+  theAccessory.context().put('controlledParameterPosition', controlledParameterPosition)
   controlParameter(parameter, UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
   positions.push(UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
   return positions
@@ -399,7 +400,6 @@ function controlPump () {
   var odNoise = theAccessory.context().getInt('odNoise', 1)
   var odMinModifier = theAccessory.context().getDouble('odMinModifier', 1.0)
   var odMaxModifier = theAccessory.context().getDouble('odMaxModifier', 1.0)
-  var changeCounter = theAccessory.context().getInt('changeCounter', 0)
   var stepCounter = theAccessory.context().getInt('stepCounter', 0)
   // Check for OD noise/overshots and primitive OD averaging
   if (!isNaN(odValue) && (round(odValue, 3) !== round(odLast, 3))) {
@@ -424,19 +424,22 @@ function controlPump () {
     UserDefinedProtocol.turbidostatODMin = (UserDefinedProtocol.turbidostatODMax - UserDefinedProtocol.turbidostatODMin) + (UserDefinedProtocol.turbidostatODMax = UserDefinedProtocol.turbidostatODMin)
   }
   if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= Number(theExperiment.getDurationSec()) && !pumpState) {
-    theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600) // TODO allocate var for getDurationSec
+    // TODO allocate var for getDurationSec
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
     if (UserDefinedProtocol.particleSwarmOptimizer) {
       var len = stepDoublingTime.length
       var stepDoublingTimeAvg = len > 2 ? len > UserDefinedProtocol.analyzedSteps ? stepDoublingTime.slice(len - UserDefinedProtocol.analyzedSteps, len).reduce(getSumArrReduce, 0) / (UserDefinedProtocol.analyzedSteps) : stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
       PSO(stepDoublingTimeAvg)
     } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-      var position = changeParameter(UserDefinedProtocol.controlledParameter)
+      var positions = changeParameter(UserDefinedProtocol.controlledParameter)
+      debugLogger('OPTIMIZER executed on max. time with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
+      theServer.sendMail('OPTIMIZER (max. time) on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
     } 
+    theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
+    theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
     theAccessory.context().remove('stepCounter')
     theAccessory.context().remove('expDuration')
     theAccessory.context().remove('stepDoublingTime')
-    theAccessory.context().remove('stabilizedTime')
   }
   // Start step growth rate evaluation
   if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
@@ -445,15 +448,12 @@ function controlPump () {
     var expDuration = theAccessory.context().get('expDuration', 0.0)
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
-    var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
     if (!Array.isArray(expDuration)) {
       stepCounter = 0
       expDuration = []; stepDuration = []; stepDoublingTime = []
       theAccessory.context().put('expDuration', expDuration)
       theAccessory.context().put('stepDuration', stepDuration)
       theAccessory.context().put('stepDoublingTime', stepDoublingTime)
-      // theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
-      // theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
       odSensorRegression.getDataHistory().setCapacity(600)
     }
     expDuration[stepCounter] = theExperiment.getDurationSec()
@@ -472,7 +472,6 @@ function controlPump () {
         var stepDoublingTimeSD = 0
         var stepDoublingTimeIC95 = 0
         var stepTrend = 0
-        // var stepCoD = 0
         var sumXY = 0
         var sumX = 0
         var sumY = 0
@@ -499,7 +498,6 @@ function controlPump () {
           sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
         }
         stepTrend = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * 3600
-        // stepCoD = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (Math.sqrt((UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * (UserDefinedProtocol.analyzedSteps * sumY2 - Math.pow(sumY, 2))))
         theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
         // Growth stability test and parameters control
         if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
@@ -510,14 +508,13 @@ function controlPump () {
           } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
             var positions = changeParameter(UserDefinedProtocol.controlledParameter)
             debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
-            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' at [ ' + positions[0].toFixed(2) + ' ] set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
+            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
           }
           theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
           theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
           theAccessory.context().remove('stepCounter')
           theAccessory.context().remove('expDuration')
           theAccessory.context().remove('stepDoublingTime')
-          theAccessory.context().remove('stabilizedTime')
         }
       }
     }
