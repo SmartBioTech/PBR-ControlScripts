@@ -366,7 +366,8 @@ function changeParameter(parameter,direction) {
     default:
   }
   controlParameter(parameter, UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
-  return positions.push(UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
+  positions.push(UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
+  return positions
 }
 // Control activity of the peristaltic pump 
 function controlPump () {
@@ -508,8 +509,8 @@ function controlPump () {
             PSO(stepDoublingTimeAvg)
           } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
             var positions = changeParameter(UserDefinedProtocol.controlledParameter)
-            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for ' + positions[0].toFixed(2) + ' and new position is [ ' + positions[1].toFixed(2) + ' ]') 
-            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position [ ' + UserDefinedProtocol.controlledParameterSteps[position - 1].toFixed(2) + ' ]') // Email notification
+            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
+            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' at [ ' + positions[0].toFixed(2) + ' ] set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
           }
           theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
           theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
