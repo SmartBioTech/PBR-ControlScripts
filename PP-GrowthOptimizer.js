@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.5.0
- * @modified 4.12.2020 (JaCe)
+ * @version 3.5.1
+ * @modified 19.12.2020 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -336,6 +336,38 @@ function controlParameter (parameter, values) {
   theAccessory.context().put('controlledParameterText', parameter + ' ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
   theExperiment.addEvent(parameter[0].toUpperCase() + parameter.slice(1) + ' changed to ' + (Array.isArray(values) ? values.join(' and ') : values) + unit)
 }
+function changeParameter(parameter,direction) {
+  if ((parameter === undefined) || (parameter === 'none')) {
+    return null
+  }
+  if(direction === undefined) {
+    direction = theAccessory.context().get('controlledParameterDirection', 'next')
+  }
+  var controlledParameterPosition = theAccessory.context().getInt('controlledParameterPosition', 1)
+  var positions = []
+  positions.push(UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
+  var len = UserDefinedProtocol.controlledParameterSteps.length
+  if(direction === 'reverse') {
+    direction = (theAccessory.context().get('controlledParameterDirection', 'next') === 'previous') ? 'next' : 'previous'
+  }
+  switch(direction) {
+    case 'next':
+      if(++controlledParameterPosition > len) {
+        theAccessory.context().put('controlledParameterDirection', 'previous')
+        controlledParameterPosition = controlledParameterPosition - 2
+      }
+      break;
+    case 'previous':
+      if(--controlledParameterPosition < 1) {
+        theAccessory.context().put('controlledParameterDirection', 'next')
+        controlledParameterPosition = controlledParameterPosition + 2
+      }
+      break;
+    default:
+  }
+  controlParameter(parameter, UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
+  return positions.push(UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
+}
 // Control activity of the peristaltic pump 
 function controlPump () {
   // Following code ready for functional implementation
@@ -398,16 +430,7 @@ function controlPump () {
       var stepDoublingTimeAvg = len > 2 ? len > UserDefinedProtocol.analyzedSteps ? stepDoublingTime.slice(len - UserDefinedProtocol.analyzedSteps, len).reduce(getSumArrReduce, 0) / (UserDefinedProtocol.analyzedSteps) : stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
       PSO(stepDoublingTimeAvg)
     } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-      if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
-        theAccessory.context().put('changeCounter', changeCounter)
-      } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)])
-        theAccessory.context().put('changeCounter', changeCounter)
-      } else {
-        controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
-        theAccessory.context().put('changeCounter', 1)
-      }
+      var position = changeParameter(UserDefinedProtocol.controlledParameter)
     } 
     theAccessory.context().remove('stepCounter')
     theAccessory.context().remove('expDuration')
@@ -418,12 +441,10 @@ function controlPump () {
   if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
     theAccessory.context().put('modeDilution', 1)
     theAccessory.context().put('modeStabilized', 0)
-    // var stepCounter = theAccessory.context().getInt('stepCounter', 0)
     var expDuration = theAccessory.context().get('expDuration', 0.0)
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
     var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
-    // var stabilizedTimeMax = theAccessory.context().getInt('stabilizedTimeMax', 0)
     if (!Array.isArray(expDuration)) {
       stepCounter = 0
       expDuration = []; stepDuration = []; stepDoublingTime = []
@@ -482,23 +503,13 @@ function controlPump () {
         // Growth stability test and parameters control
         if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= Number(theExperiment.getDurationSec())))) {
           theAccessory.context().put('modeStabilized', 1)
-          // changeCounter = theAccessory.context().getInt('changeCounter', 0)
           theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + '  ' + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
           if (UserDefinedProtocol.particleSwarmOptimizer) {
             PSO(stepDoublingTimeAvg)
           } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-            if (changeCounter < (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-              controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[++changeCounter])
-              theAccessory.context().put('changeCounter', changeCounter)
-            } else if (changeCounter < 2 * (UserDefinedProtocol.controlledParameterSteps.length - 1)) {
-              controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[2 * (UserDefinedProtocol.controlledParameterSteps.length - 1) - (++changeCounter)])
-              theAccessory.context().put('changeCounter', changeCounter)
-            } else {
-              controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[1])
-              theAccessory.context().put('changeCounter', 1)
-            }
-            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' and new position is [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') 
-            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position [ ' + UserDefinedProtocol.controlledParameterSteps[changeCounter].toFixed(2) + ' ]') // Email notification
+            var positions = changeParameter(UserDefinedProtocol.controlledParameter)
+            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for ' + positions[0].toFixed(2) + ' and new position is [ ' + positions[1].toFixed(2) + ' ]') 
+            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': for fitness ' + stepDoublingTimeAvg + ' set new position [ ' + UserDefinedProtocol.controlledParameterSteps[position - 1].toFixed(2) + ' ]') // Email notification
           }
           theAccessory.context().put('stabilizedTime', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMin * 3600)
           theAccessory.context().put('stabilizedTimeMax', theExperiment.getDurationSec() + UserDefinedProtocol.stabilizationTimeMax * 3600)
@@ -537,7 +548,7 @@ function PSO (particleFitness) {
    * @return {array}         New parameters / conditions.          
    */
   if (particleFitness === undefined) {
-    particleFitness = [ 999.9 ]
+    particleFitness = 999.9
   }
   theAccessory.context().put('particleLastFitness', particleFitness)
   var particlePosition = theAccessory.context().get('particlePosition', UserDefinedProtocol.controlledParametersIC)
