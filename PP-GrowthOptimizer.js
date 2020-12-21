@@ -368,6 +368,7 @@ function changeParameter(parameter, direction) {
   theAccessory.context().put('controlledParameterPosition', controlledParameterPosition)
   controlParameter(parameter, UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
   positions.push(UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
+  debugLogger('parameterChange() positions are ' + positions.toString())
   return positions
 }
 // Control activity of the peristaltic pump 
@@ -426,20 +427,20 @@ function controlPump () {
   }
   if (theAccessory.context().getInt('stabilizedTimeMax', 0) <= experimentDuration && !pumpState) {
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
+    var len = stepDoublingTime.length
+    var stepDoublingTimeAvg = len > 2 ? len > UserDefinedProtocol.analyzedSteps ? stepDoublingTime.slice(len - UserDefinedProtocol.analyzedSteps, len).reduce(getSumArrReduce, 0) / (UserDefinedProtocol.analyzedSteps) : stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
+    theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
+    theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
+    theAccessory.context().remove('stepCounter')
+    theAccessory.context().remove('expDuration')
+    theAccessory.context().remove('stepDoublingTime')
     if (UserDefinedProtocol.particleSwarmOptimizer) {
-      var len = stepDoublingTime.length
-      var stepDoublingTimeAvg = len > 2 ? len > UserDefinedProtocol.analyzedSteps ? stepDoublingTime.slice(len - UserDefinedProtocol.analyzedSteps, len).reduce(getSumArrReduce, 0) / (UserDefinedProtocol.analyzedSteps) : stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
       PSO(stepDoublingTimeAvg)
     } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
       var positions = changeParameter(UserDefinedProtocol.controlledParameter)
       debugLogger('OPTIMIZER executed on max. time with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
       theServer.sendMail('OPTIMIZER (max. time) on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
     } 
-    theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
-    theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
-    theAccessory.context().remove('stepCounter')
-    theAccessory.context().remove('expDuration')
-    theAccessory.context().remove('stepDoublingTime')
   }
   // Start step growth rate evaluation
   if (((odValue > (UserDefinedProtocol.turbidostatODMax * odMaxModifier)) && !pumpState)) {
@@ -448,6 +449,7 @@ function controlPump () {
     var expDuration = theAccessory.context().get('expDuration', 0.0)
     var stepDuration = theAccessory.context().get('stepDuration', 0.0)
     var stepDoublingTime = theAccessory.context().get('stepDoublingTime', [ 999.9 ])
+    var stabilizedTime = theAccessory.context().getInt('stabilizedTime', 0)
     if (!Array.isArray(expDuration)) {
       stepCounter = 0
       expDuration = []; stepDuration = []; stepDoublingTime = []
@@ -502,6 +504,11 @@ function controlPump () {
         // Growth stability test and parameters control
         if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= experimentDuration))) {
           theAccessory.context().put('modeStabilized', 1)
+          theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
+          theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
+          theAccessory.context().remove('stepCounter')
+          theAccessory.context().remove('expDuration')
+          theAccessory.context().remove('stepDoublingTime')
           theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + '  ' + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
           if (UserDefinedProtocol.particleSwarmOptimizer) {
             PSO(stepDoublingTimeAvg)
@@ -510,11 +517,6 @@ function controlPump () {
             debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
             theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
           }
-          theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
-          theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
-          theAccessory.context().remove('stepCounter')
-          theAccessory.context().remove('expDuration')
-          theAccessory.context().remove('stepDoublingTime')
         }
       }
     }
