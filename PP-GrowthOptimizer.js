@@ -110,8 +110,10 @@ if (!theAccessory.context().getInt('initiated', 0)) {
     theAccessory.context().put('light1String', light1String)
     if (UserDefinedProtocol.particleSwarmOptimizer) {
       var parameters = UserDefinedProtocol.controlledParameters
+      var values = UserDefinedProtocol.controlledParametersIC
     } else {
       var parameters = [ UserDefinedProtocol.controlledParameter ]
+      var values = UserDefinedProtocol.controlledParameterSteps
     }
     for (var i = 0; i < parameters.length; i++) {
       switch (parameters[i]) {
@@ -171,7 +173,9 @@ if (!theAccessory.context().getInt('initiated', 0)) {
           break
         default:
           theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting')
+          continue
       }
+      controlParameter(parameters[i], values[i])
     }
     if (UserDefinedProtocol.turbidostatODType === 680 || UserDefinedProtocol.regressionODType === 680) {
       if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
@@ -197,7 +201,6 @@ if (!theAccessory.context().getInt('initiated', 0)) {
       debugLogger('OD range reversed.')
       theExperiment.addEvent('OD range set in reversed order - will be automatically corrected.')
     }
-    controlParameter(UserDefinedProtocol.controlledParameter, UserDefinedProtocol.controlledParameterSteps[0])
     theAccessory.context().put('initiated', 1)
     debugLogger('Peristaltic Pump - Growth Optimizer initialization successful.')
   } catch (error) {
