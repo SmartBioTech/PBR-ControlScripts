@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.5.2
- * @modified 20.12.2020 (JaCe)
+ * @version 3.5.3
+ * @modified 26.1.2021 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -108,63 +108,70 @@ if (!theAccessory.context().getInt('initiated', 0)) {
       light1String = 'actinic-lights.light-Blue'
     }
     theAccessory.context().put('light1String', light1String)
-    switch (UserDefinedProtocol.controlledParameter) {
-      case 'lights':
-        if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable RED LIGHT protocol')
-        }
-        if (light1String === 'actinic-lights.light-Blue') {
+    if (UserDefinedProtocol.particleSwarmOptimizer) {
+     var parameters = UserDefinedProtocol.controlledParameters
+    } else {
+      var parameters = UserDefinedProtocol.controlledParameter
+    }
+    for (x of parameters) {
+      switch (UserDefinedProtocol.controlledParameter) {
+        case 'lights':
+          if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable RED LIGHT protocol')
+          }
+          if (light1String === 'actinic-lights.light-Blue') {
+            if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+              theExperiment.addEvent('!!! Disable BLUE LIGHT protocol')
+            }
+          } else if (theGroup.getAccessory('actinic-lights.light-White').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable WHITE LIGHT protocol')
+          }
+          break
+        case 'light-red':
+          if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable RED LIGHT protocol')
+          }
+          break
+        case 'light-blue':
           if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
             theExperiment.addEvent('!!! Disable BLUE LIGHT protocol')
           }
-        } else if (theGroup.getAccessory('actinic-lights.light-White').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable WHITE LIGHT protocol')
-        }
-        break
-      case 'light-red':
-        if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable RED LIGHT protocol')
-        }
-        break
-      case 'light-blue':
-        if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable RED LIGHT protocol')
-        }
-        break
-      case 'light-white':
-        if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable RED LIGHT protocol')
-        }
-        break
-      case 'temperature':
-        if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable THERMOREGULATOR protocol')
-        }
-        break
-      case 'GMS':
-        if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable GMS CO2 protocol')
-        }
-        if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable GMS Air/N2 protocol')
-        }
-        break
-      case 'GMS-CO2':
-        if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable GMS CO2 protocol')
-        } 
-        break     
-      case 'stirrer':
-        if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
-          theExperiment.addEvent('!!! Disable STIRRER protocol')
-        }
-        break
-      case 'ODRange':
-        break
-      case 'none':
-        break
-      default:
-        theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting')
+          break
+        case 'light-white':
+          if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable WHITE LIGHT protocol')
+          }
+          break
+        case 'temperature':
+          if (theGroup.getAccessory('thermo.thermo-reg').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable THERMOREGULATOR protocol')
+          }
+          break
+        case 'GMS':
+          if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable GMS CO2 protocol')
+          }
+          if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-1-reg').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable GMS Air/N2 protocol')
+          }
+          break
+        case 'GMS-CO2':
+          if (UserDefinedProtocol.groupGMS.getAccessory('gas-mixer.valve-0-reg').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable GMS CO2 protocol')
+          } 
+          break     
+        case 'stirrer':
+          if (theGroup.getAccessory('pwm.stirrer').getProtoConfigValue()) {
+            theExperiment.addEvent('!!! Disable STIRRER protocol')
+          }
+          break
+        case 'ODRange':
+          break
+        case 'none':
+          break
+        default:
+          theExperiment.addEvent('!!! Unknown parameter set for control - check controlledParameter setting')
+      }
     }
     if (UserDefinedProtocol.turbidostatODType === 680 || UserDefinedProtocol.regressionODType === 680) {
       if (Number(theGroup.getAccessory('od-sensors.od-680').getProtoConfigValue()) !== UserDefinedProtocol.ODReadoutInterval) {
