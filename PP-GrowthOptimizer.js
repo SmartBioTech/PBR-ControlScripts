@@ -109,12 +109,12 @@ if (!theAccessory.context().getInt('initiated', 0)) {
     }
     theAccessory.context().put('light1String', light1String)
     if (UserDefinedProtocol.particleSwarmOptimizer) {
-     var parameters = UserDefinedProtocol.controlledParameters
+      var parameters = UserDefinedProtocol.controlledParameters
     } else {
-      var parameters = UserDefinedProtocol.controlledParameter
+      var parameters = [ UserDefinedProtocol.controlledParameter ]
     }
-    for (x of parameters) {
-      switch (UserDefinedProtocol.controlledParameter) {
+    for (var i = 0; i < parameters.length; i++) {
+      switch (parameters[i]) {
         case 'lights':
           if (theGroup.getAccessory('actinic-lights.light-Red').getProtoConfigValue()) {
             theExperiment.addEvent('!!! Disable RED LIGHT protocol')
