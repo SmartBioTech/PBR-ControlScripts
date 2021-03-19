@@ -31,7 +31,11 @@ var UserDefinedProtocol = {
   peristalticPumpSlowDownFactor: 75,
   // -advanced options
   growthRateEvalDelay: 420,
-  groupGMS: theGroup
+  groupGMS: theGroup,
+  mediaCarbonization: false,
+  carbonizationOff: 4.2,
+  carbonizationNormal: 8.4,
+  carbonizationBoost: 37.0
 }
 
 /* global
@@ -45,8 +49,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.5.3
- * @modified 26.1.2021 (JaCe)
+ * @version 3.6.0
+ * @modified 19.3.2021 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -66,7 +70,7 @@ var UserDefinedProtocol = {
  *                stirrer = [ 30, 50, 65, 80, 95 ]; // [%] !!! works only with SW version 0.7.14 and later
  *                ODRange = [[0.4, 0.425], [0.2, 0.215], [0.1, 0.113]]; // [AU]
  * -optimizer stability check
- * @param {number} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
+ * @param {boolean} growthStatistics [true/false] - Enable or disable calculation of growth statistics. Note that the doubling time (Dt) calculation also includes information about the fit coefficient of determination (CoD in %), known as R-squared
  * @param {number} regressionODType [680/720/735] - OD sensor used for doubling time determination
  * @param {number} regressionCoDMin [%] - Minimum accpeted coefficient of determination for staility check evaluation (values below are ignored)
  * @param {number} stabilizationTimeMin [h] - Minimum duration of each characterization step
@@ -84,6 +88,10 @@ var UserDefinedProtocol = {
  * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
  *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
  * @param {string} groupGMS - Identifies the group that contains Gas Mixing System. System value - do not change unless sure what you are doing!
+ * @param {boolean} mediaCarbonization [true/false] - Enable or disable media carbonization during turbidostat pump action.
+ * @param {double} carbonizationOff [ml/min] - GMS CO2 channel flow when no carbonization of media is activated.
+ * @param {double} carbonizationNormal [ml/min] - GMS CO2 channel flow when weak carbonization of media is activated.
+ * @param {double} carbonizationBoost [ml/min] - GMS CO2 channel flow when intensive carbonization of media is activated.
  *
  * @return Flow of external/additional pump
  *
@@ -205,6 +213,27 @@ if (!theAccessory.context().getInt('initiated', 0)) {
     debugLogger('Peristaltic Pump - Growth Optimizer initialization successful.')
   } catch (error) {
     debugLogger('Initialization ERROR. ' + error.name + ' : ' + error.message)
+  }
+}
+
+// Trigger media carbonization
+if (UserDefinedProtocol.groupGMS === theGroup) {
+  try {
+    switch(theAccessory.context().getInt('carbonization', 0)) {
+      case -1:
+        theGroup.getAccessory('gas-mixer.valve-0-reg').setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.carbonizationOff))
+        theAccessory.context().put('carbonization', 0)
+        break
+      case 1: 
+        theGroup.getAccessory('gas-mixer.valve-0-reg').setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.carbonizationNormal))
+        break
+      case 2: 
+        theGroup.getAccessory('gas-mixer.valve-0-reg').setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.carbonizationBoost))
+        break
+      default:
+    }
+  } catch (error) {
+    debugLogger('Carbonization ERROR. ' + error.name + ' : ' + error.message)
   }
 }
 
@@ -531,14 +560,35 @@ function controlPump () {
       }
     }
     debugLogger('Pump max speed.')
+    if (UserDefinedProtocol.mediaCarbonization && ((theAccessory.context().getDouble('pHpostDilution',7.0) - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0)) {
+      debugLogger('Carbonization initiated')
+      theAccessory.context().put('carbonization', 1)
+      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', 1)
+    }
+    theAccessory.context().put('pHpreDilution', theGroup.getAccessory('probes.ph').getValue())
     return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 // fast
   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier)) && pumpState) {
     theAccessory.context().put('modeDilution', 0)
     theAccessory.context().put('lastPumpStop', experimentDuration)
     debugLogger('Pump stopped.')
+    if (theAccessory.context().get('carbonization', 0)) {
+      debugLogger('Carbonization terminated')
+      theAccessory.context().put('carbonization', 0)
+      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', -1)
+    }
+    theAccessory.context().put('pHpostDilution', theGroup.getAccessory('probes.ph').getValue())
     return ProtoConfig.OFF // pump off
   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier + ((UserDefinedProtocol.turbidostatODMax * odMaxModifier) - (UserDefinedProtocol.turbidostatODMin * odMinModifier)) * UserDefinedProtocol.peristalticPumpSlowDownRange / 100)) && pumpState) {
-    debugLogger('Pump low speed.', 0)
+    debugLogger('Pump low speed', 0)
+    if (UserDefinedProtocol.mediaCarbonization && ((theGroup.getAccessory('probes.ph').getValue() - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0) && !theAccessory.context().get('carbonization', 0)) {
+      debugLogger('Carbonization boost')
+      theAccessory.context().put('carbonization', 1)
+      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', 2)
+    } else {
+      debugLogger('Carbonization terminated')
+      theAccessory.context().put('carbonization', 0)
+      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', -1)
+    }
     return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100 // slow down the pump
   } else {
     return null // pump not influenced
