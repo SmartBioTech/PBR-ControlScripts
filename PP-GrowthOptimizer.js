@@ -580,9 +580,9 @@ function controlPump () {
     return ProtoConfig.OFF // pump off
   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier + ((UserDefinedProtocol.turbidostatODMax * odMaxModifier) - (UserDefinedProtocol.turbidostatODMin * odMinModifier)) * UserDefinedProtocol.peristalticPumpSlowDownRange / 100)) && pumpState) {
     debugLogger('Pump low speed', 0)
-    if (UserDefinedProtocol.mediaCarbonization && ((theGroup.getAccessory('probes.ph').getValue() - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0) && (theAccessory.context().get('carbonization', 0) < 2)) {
+    if (UserDefinedProtocol.mediaCarbonization && ((theGroup.getAccessory('probes.ph').getValue() - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0) && !theAccessory.context().get('carbonization', 0)) {
       debugLogger('Carbonization boost')
-      theAccessory.context().put('carbonization', 2)
+      theAccessory.context().put('carbonization', 1)
       theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', 2)
     } else {
       debugLogger('Carbonization terminated')
