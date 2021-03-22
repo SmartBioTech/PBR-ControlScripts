@@ -87,7 +87,7 @@ var UserDefinedProtocol = {
  * -advanced options
  * @param {number} growthRateEvalDelay [s] - Time after dilution where data for doubling time determination are ignored. By default growthRateEvalFrac, i.e. only limited fraction of the data points is used for calculations.
  *                 This is to prevent influence of post dilution effect on doubling time evaluation. If 0 or false, growthRateEvalDelay is used instead. Note that to completely disable data limitation you need to set both growthRateEvalFrac and growthRateEvalDelay to 0.
- * @param {string} groupGMS - Identifies the group that contains Gas Mixing System. System value - do not change unless sure what you are doing!
+ * @param {object} groupGMS - Identifies the group that contains Gas Mixing System. System value - do not change unless sure what you are doing! Example: theServer.getGroupByName('GROUP-NAME')
  * @param {boolean} mediaCarbonization [true/false] - Enable or disable media carbonization during turbidostat pump action.
  * @param {double} carbonizationOff [ml/min] - GMS CO2 channel flow when no carbonization of media is activated.
  * @param {double} carbonizationNormal [ml/min] - GMS CO2 channel flow when weak carbonization of media is activated.
@@ -563,7 +563,7 @@ function controlPump () {
     if (UserDefinedProtocol.mediaCarbonization && ((theAccessory.context().getDouble('pHpostDilution',7.0) - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0)) {
       debugLogger('Carbonization initiated')
       theAccessory.context().put('carbonization', 1)
-      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', 1)
+      UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', 1)
     }
     theAccessory.context().put('pHpreDilution', theGroup.getAccessory('probes.ph').getValue())
     return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 // fast
@@ -574,7 +574,7 @@ function controlPump () {
     if (theAccessory.context().get('carbonization', 0)) {
       debugLogger('Carbonization terminated')
       theAccessory.context().put('carbonization', 0)
-      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', -1)
+      UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', -1)
     }
     theAccessory.context().put('pHpostDilution', theGroup.getAccessory('probes.ph').getValue())
     return ProtoConfig.OFF // pump off
@@ -583,11 +583,11 @@ function controlPump () {
     if (UserDefinedProtocol.mediaCarbonization && ((theGroup.getAccessory('probes.ph').getValue() - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0) && (theAccessory.context().get('carbonization', 0) < 2)) {
       debugLogger('Carbonization boost')
       theAccessory.context().put('carbonization', 2)
-      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', 2)
+      UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', 2)
     } else if (UserDefinedProtocol.mediaCarbonization && (theAccessory.context().get('carbonization', 0) == 1)) {
       debugLogger('Carbonization terminated')
       theAccessory.context().put('carbonization', 0)
-      theServer.getGroupByName(UserDefinedProtocol.groupGMS).getAccessory('pumps.pump-5').context().put('carbonization', -1)
+      UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', -1)
     }
     return theAccessory.getMax() * UserDefinedProtocol.peristalticPumpSpeed / 100 * UserDefinedProtocol.peristalticPumpSlowDownFactor / 100 // slow down the pump
   } else {
