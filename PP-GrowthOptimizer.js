@@ -1,7 +1,7 @@
 var UserDefinedProtocol = {
   // -turbidostat settings
-  turbidostatODMin: 0.18,
-  turbidostatODMax: 0.195,
+  turbidostatODMin: 0.3325,
+  turbidostatODMax: 0.3367,
   turbidostatODType: 720,
   ODReadoutInterval: 60,
   // -optimizer parameters
@@ -49,8 +49,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.6.0
- * @modified 19.3.2021 (JaCe)
+ * @version 3.6.1
+ * @modified 21.4.2021 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -148,7 +148,7 @@ if (!theAccessory.context().getInt('initiated', 0)) {
           }
           break
         case 'light-white':
-          if (theGroup.getAccessory('actinic-lights.light-Blue').getProtoConfigValue()) {
+          if (theGroup.getAccessory('actinic-lights.light-White').getProtoConfigValue()) {
             theExperiment.addEvent('!!! Disable WHITE LIGHT protocol')
           }
           break
