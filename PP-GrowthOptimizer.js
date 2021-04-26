@@ -17,13 +17,13 @@ var UserDefinedProtocol = {
   // -optimizer stability check
   growthStatistics: true,
   regressionODType: 680,
-  regressionCoDMin: 60,
-  stabilizationTimeMin: 3,
-  stabilizationTimeMax: 7,
+  regressionCoDMin: 75,
+  stabilizationTimeMin: 8,
+  stabilizationTimeMax: 24,
   growthRateEvalFrac: 3 / 4,
   analyzedSteps: 6,
-  growthTrendMax: 15,
-  intervalOfConfidenceMax: 35,
+  growthTrendMax: 1.5,
+  CI95AmplitudeMax: 2.5,
   // -peristaltic pump settings
   peristalticPumpID: 5,
   peristalticPumpSpeed: 100,
@@ -49,8 +49,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.6.1
- * @modified 21.4.2021 (JaCe)
+ * @version 3.6.2
+ * @modified 26.4.2021 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -78,7 +78,7 @@ var UserDefinedProtocol = {
  * @param {number} growthRateEvalFrac [0-1] - Defines whether to use particular fraction of the data points for doubling time determination.
  * @param {number} analyzedSteps [-] - Number of steps to be analyzed for stability check
  * @param {number} growthTrendMax [%] - Maximum growth speed trend in time
- * @param {number} intervalOfConfidenceMax [%] - Maximum allowed percents of 95% Confidence Interval
+ * @param {number} intervalOfConfidenceAmplitudeMax [%] - Maximum allowed amblitude of 95% Confidence Interval in percents from mean
  * -peristaltic pump settings
  * @param {number} peristalticPumpID [3-7] - Defines peristaltic pump ID set to the pump that is used for fresh media supply (quasi-continuous mode)
  * @param {number} peristalticPumpSpeed [%] - Nominal pump speed used for dilution of the suspension
@@ -104,7 +104,7 @@ importPackage(Packages.psi.bioreactor.core.protocol)
 importPackage(Packages.psi.bioreactor.core.regression)
 
 // Inicialization of the control script
-if (!theAccessory.context().getInt('initiated', 0)) {
+if (!theAccessory.context().get('initiated', false)) {
   try {
     theAccessory.context().clear()
     theAccessory.context().put('stabilizedTime', Number(theExperiment.getDurationSec()) + UserDefinedProtocol.stabilizationTimeMin * 3600)
@@ -209,7 +209,7 @@ if (!theAccessory.context().getInt('initiated', 0)) {
       debugLogger('OD range reversed.')
       theExperiment.addEvent('OD range set in reversed order - will be automatically corrected.')
     }
-    theAccessory.context().put('initiated', 1)
+    theAccessory.context().put('initiated', true)
     debugLogger('Peristaltic Pump - Growth Optimizer initialization successful.')
   } catch (error) {
     debugLogger('Initialization ERROR. ' + error.name + ' : ' + error.message)
@@ -407,7 +407,6 @@ function changeParameter(parameter, direction) {
   theAccessory.context().put('controlledParameterPosition', controlledParameterPosition)
   controlParameter(parameter, UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
   positions.push(UserDefinedProtocol.controlledParameterSteps[controlledParameterPosition-1])
-  debugLogger('parameterChange() positions are ' + positions.toString())
   return positions
 }
 // Control activity of the peristaltic pump 
@@ -470,6 +469,7 @@ function controlPump () {
     var stepDoublingTimeAvg = len > 2 ? len > UserDefinedProtocol.analyzedSteps ? stepDoublingTime.slice(len - UserDefinedProtocol.analyzedSteps, len).reduce(getSumArrReduce, 0) / (UserDefinedProtocol.analyzedSteps) : stepDoublingTime.slice(1, len).reduce(getSumArrReduce, 0) / (len - 1) : stepDoublingTime[len - 1]
     theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
     theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
+    theAccessory.context().remove('stepAccumulated')
     theAccessory.context().remove('stepCounter')
     theAccessory.context().remove('expDuration')
     theAccessory.context().remove('stepDoublingTime')
@@ -511,50 +511,55 @@ function controlPump () {
       if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
         var stepDoublingTimeAvg = 0
         var stepDoublingTimeSD = 0
-        var stepDoublingTimeIC95 = 0
+        var stepDoublingTimeCI95 = 0
         var stepTrend = 0
+        var stepAccumulated = theAccessory.context().getInt('stepAccumulated', 0)
         var sumXY = 0
         var sumX = 0
         var sumY = 0
         var sumX2 = 0
         // var sumY2 = 0
-        // TODO if trend then accumulate steps as [analyzedSteps inf]
         // Average of steps doubling time
-        for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
+        for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
           stepDoublingTimeAvg += Number(stepDoublingTime[i])
         }
-        stepDoublingTimeAvg /= UserDefinedProtocol.analyzedSteps
-        // IC95 of steps doubling time
-        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
+        stepDoublingTimeAvg /= (UserDefinedProtocol.analyzedSteps + stepAccumulated)
+        // CI95 of steps doubling time
+        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
           stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
         }
-        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / (UserDefinedProtocol.analyzedSteps - 1))
-        stepDoublingTimeIC95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps) * 1.96
+        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / (UserDefinedProtocol.analyzedSteps + stepAccumulated - 1))
+        stepDoublingTimeCI95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps + stepAccumulated) * 1.96
         // Trend of steps doubling time
-        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps); i--) {
+        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
           sumX += Number(expDuration[i])
           sumX2 += Math.pow(expDuration[i], 2)
           sumY += Number(stepDoublingTime[i])
           // sumY2 += Math.pow(stepDoublingTime[i], 2)
           sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
         }
-        stepTrend = (UserDefinedProtocol.analyzedSteps * sumXY - sumX * sumY) / (UserDefinedProtocol.analyzedSteps * sumX2 - Math.pow(sumX, 2)) * 3600
-        theExperiment.addEvent('Steps doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, IC95 ' + round(stepDoublingTimeIC95, 2) + ' h (' + round(stepDoublingTimeIC95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
+        stepTrend = ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumXY - sumX * sumY) / ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumX2 - Math.pow(sumX, 2)) * 3600
+        theExperiment.addEvent('Step doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, CI95 ' + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (' + round(stepDoublingTimeCI95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
         // Growth stability test and parameters control
-        if (((stepDoublingTimeIC95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.intervalOfConfidenceMax / 100) && (Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) && (stabilizedTime <= experimentDuration))) {
-          theAccessory.context().put('modeStabilized', 1)
-          theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
-          theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
-          theAccessory.context().remove('stepCounter')
-          theAccessory.context().remove('expDuration')
-          theAccessory.context().remove('stepDoublingTime')
-          theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + '  ' + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeIC95, 2) + ' h (IC95)')
-          if (UserDefinedProtocol.particleSwarmOptimizer) {
-            PSO(stepDoublingTimeAvg)
-          } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-            var positions = changeParameter(UserDefinedProtocol.controlledParameter)
-            debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
-            theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
+        if ((Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) || stepAccumulated) {
+            // TODO this solution removes stepTrend criteria check if at least once reached (expecting convergence!!!). May need to be upgraded later.
+            theAccessory.context().put('stepAccumulated', stepAccumulated + 1)
+          if ((stabilizedTime <= experimentDuration) && ((stepDoublingTimeCI95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.CI95AmplitudeMax / 100))) {
+            theAccessory.context().put('modeStabilized', 1)
+            theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
+            theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
+            theAccessory.context().remove('stepAccumulated')
+            theAccessory.context().remove('stepCounter')
+            theAccessory.context().remove('expDuration')
+            theAccessory.context().remove('stepDoublingTime')
+            theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + '  ' + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (CI95)')
+            if (UserDefinedProtocol.particleSwarmOptimizer) {
+              PSO(stepDoublingTimeAvg)
+            } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
+              var positions = changeParameter(UserDefinedProtocol.controlledParameter)
+              debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
+              theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
+            }
           }
         }
       }
@@ -571,7 +576,7 @@ function controlPump () {
     theAccessory.context().put('modeDilution', 0)
     theAccessory.context().put('lastPumpStop', experimentDuration)
     debugLogger('Pump stopped.')
-    if (theAccessory.context().get('carbonization', 0)) {
+    if (theAccessory.context().getInt('carbonization', 0)) {
       debugLogger('Carbonization terminated')
       theAccessory.context().put('carbonization', 0)
       UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', -1)
@@ -580,11 +585,11 @@ function controlPump () {
     return ProtoConfig.OFF // pump off
   } else if ((odValue <= (UserDefinedProtocol.turbidostatODMin * odMinModifier + ((UserDefinedProtocol.turbidostatODMax * odMaxModifier) - (UserDefinedProtocol.turbidostatODMin * odMinModifier)) * UserDefinedProtocol.peristalticPumpSlowDownRange / 100)) && pumpState) {
     debugLogger('Pump low speed', 0)
-    if (UserDefinedProtocol.mediaCarbonization && ((theGroup.getAccessory('probes.ph').getValue() - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0) && (theAccessory.context().get('carbonization', 0) < 2)) {
+    if (UserDefinedProtocol.mediaCarbonization && ((theGroup.getAccessory('probes.ph').getValue() - theAccessory.context().getDouble('pHpreDilution',7.0)) > 0) && (theAccessory.context().getInt('carbonization', 0) < 2)) {
       debugLogger('Carbonization boost')
       theAccessory.context().put('carbonization', 2)
       UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', 2)
-    } else if (UserDefinedProtocol.mediaCarbonization && (theAccessory.context().get('carbonization', 0) == 1)) {
+    } else if (UserDefinedProtocol.mediaCarbonization && (theAccessory.context().getInt('carbonization', 0) == 1)) {
       debugLogger('Carbonization terminated')
       theAccessory.context().put('carbonization', 0)
       UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', -1)
