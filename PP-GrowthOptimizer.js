@@ -1,7 +1,7 @@
 var UserDefinedProtocol = {
   // -turbidostat settings
   turbidostatODMin: 0.3325,
-  turbidostatODMax: 0.3367,
+  turbidostatODMax: 0.3675,
   turbidostatODType: 720,
   ODReadoutInterval: 60,
   // -optimizer parameters
@@ -227,7 +227,7 @@ if (UserDefinedProtocol.groupGMS === theGroup) {
       case 1: 
         theGroup.getAccessory('gas-mixer.valve-0-reg').setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.carbonizationNormal))
         break
-      case 2: 
+      case 2:
         theGroup.getAccessory('gas-mixer.valve-0-reg').setRunningProtoConfig(new ProtoConfig(UserDefinedProtocol.carbonizationBoost))
         break
       default:
@@ -539,7 +539,7 @@ function controlPump () {
           sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
         }
         stepTrend = ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumXY - sumX * sumY) / ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumX2 - Math.pow(sumX, 2)) * 3600
-        theExperiment.addEvent('Step doubling time Avg: ' + round(stepDoublingTimeAvg, 2) + ' h, CI95 ' + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (' + round(stepDoublingTimeCI95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
+        theExperiment.addEvent('Average step doubling time is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (CI95, ' + round(stepDoublingTimeCI95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
         // Growth stability test and parameters control
         if ((Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) || stepAccumulated) {
             // TODO this solution removes stepTrend criteria check if at least once reached (expecting convergence!!!). May need to be upgraded later.
@@ -576,7 +576,7 @@ function controlPump () {
     theAccessory.context().put('modeDilution', 0)
     theAccessory.context().put('lastPumpStop', experimentDuration)
     debugLogger('Pump stopped.')
-    if (theAccessory.context().getInt('carbonization', 0)) {
+    if (UserDefinedProtocol.mediaCarbonization && theAccessory.context().getInt('carbonization', 0)) {
       debugLogger('Carbonization terminated')
       theAccessory.context().put('carbonization', 0)
       UserDefinedProtocol.groupGMS.getAccessory('pumps.pump-5').context().put('carbonization', -1)
