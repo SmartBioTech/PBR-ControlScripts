@@ -503,12 +503,11 @@ function controlPump () {
       var DHCapacity = (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) > 0 ? (Math.floor(stepDuration[stepCounter] / UserDefinedProtocol.ODReadoutInterval) - 3) : 60
       var regCoefExp = odSensorRegression.getDataHistory().regression(ETrendFunction.EXP, Math.ceil(DHCapacity - (UserDefinedProtocol.growthRateEvalFrac ? DHCapacity * (UserDefinedProtocol.growthRateEvalFrac / 100) : UserDefinedProtocol.growthRateEvalDelay / UserDefinedProtocol.ODReadoutInterval)))
       debugLogger('Growth parameters: A=' + regCoefExp[0] +', B=' + regCoefExp[1] + ', R2=' + regCoefExp[2])
+      theExperiment.addEvent('Doubling time of the step was ' + round((1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2, 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%)')
       if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin / 100) {
         stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
-        theAccessory.context().put('stepCounter', ++stepCounter)
-      }
-      theExperiment.addEvent('Doubling time of the step was ' + round((1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2, 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%)')
-      if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
+        theAccessory.context().put('stepCounter', stepCounter + 1)
+        if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
         var stepDoublingTimeAvg = 0
         var stepDoublingTimeSD = 0
         var stepDoublingTimeCI95 = 0
@@ -561,6 +560,7 @@ function controlPump () {
               theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
             }
           }
+        }
         }
       }
     }
