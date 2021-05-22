@@ -506,61 +506,61 @@ function controlPump () {
       theExperiment.addEvent('Doubling time of the step was ' + round((1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2, 2) + ' h (CoD ' + round(Number(regCoefExp[2]) * 100, 1) + '%)')
       if (Number(regCoefExp[2]) >= UserDefinedProtocol.regressionCoDMin / 100) {
         stepDoublingTime[stepCounter] = (1 / (Number(regCoefExp[1]) * 3600 * 10)) * Math.LN2
-        theAccessory.context().put('stepCounter', stepCounter + 1)
+        theAccessory.context().put('stepCounter', ++stepCounter)
         if (stepCounter >= UserDefinedProtocol.analyzedSteps) {
-        var stepDoublingTimeAvg = 0
-        var stepDoublingTimeSD = 0
-        var stepDoublingTimeCI95 = 0
-        var stepTrend = 0
-        var stepAccumulated = theAccessory.context().getInt('stepAccumulated', 0)
-        var sumXY = 0
-        var sumX = 0
-        var sumY = 0
-        var sumX2 = 0
-        // var sumY2 = 0
-        // Average of steps doubling time
-        for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
-          stepDoublingTimeAvg += Number(stepDoublingTime[i])
-        }
-        stepDoublingTimeAvg /= (UserDefinedProtocol.analyzedSteps + stepAccumulated)
-        // CI95 of steps doubling time
-        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
-          stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
-        }
-        stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / (UserDefinedProtocol.analyzedSteps + stepAccumulated - 1))
-        stepDoublingTimeCI95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps + stepAccumulated) * 1.96
-        // Trend of steps doubling time
-        for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
-          sumX += Number(expDuration[i])
-          sumX2 += Math.pow(expDuration[i], 2)
-          sumY += Number(stepDoublingTime[i])
-          // sumY2 += Math.pow(stepDoublingTime[i], 2)
-          sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
-        }
-        stepTrend = ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumXY - sumX * sumY) / ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumX2 - Math.pow(sumX, 2)) * 3600
-        theExperiment.addEvent('Average step doubling time is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (CI95, ' + round(stepDoublingTimeCI95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
-        // Growth stability test and parameters control
-        if ((Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) || stepAccumulated) {
+          var stepDoublingTimeAvg = 0
+          var stepDoublingTimeSD = 0
+          var stepDoublingTimeCI95 = 0
+          var stepTrend = 0
+          var stepAccumulated = theAccessory.context().getInt('stepAccumulated', 0)
+          var sumXY = 0
+          var sumX = 0
+          var sumY = 0
+          var sumX2 = 0
+          // var sumY2 = 0
+          // Average of steps doubling time
+          for (var i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
+            stepDoublingTimeAvg += Number(stepDoublingTime[i])
+          }
+          stepDoublingTimeAvg /= (UserDefinedProtocol.analyzedSteps + stepAccumulated)
+          // CI95 of steps doubling time
+          for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
+            stepDoublingTimeSD += Math.pow(stepDoublingTime[i] - stepDoublingTimeAvg, 2)
+          }
+          stepDoublingTimeSD = Math.sqrt(stepDoublingTimeSD / (UserDefinedProtocol.analyzedSteps + stepAccumulated - 1))
+          stepDoublingTimeCI95 = stepDoublingTimeSD / Math.sqrt(UserDefinedProtocol.analyzedSteps + stepAccumulated) * 1.96
+          // Trend of steps doubling time
+          for (i = (stepCounter - 1); i >= (stepCounter - UserDefinedProtocol.analyzedSteps - stepAccumulated); i--) {
+            sumX += Number(expDuration[i])
+            sumX2 += Math.pow(expDuration[i], 2)
+            sumY += Number(stepDoublingTime[i])
+            // sumY2 += Math.pow(stepDoublingTime[i], 2)
+            sumXY += Number(expDuration[i]) * Number(stepDoublingTime[i])
+          }
+          stepTrend = ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumXY - sumX * sumY) / ((UserDefinedProtocol.analyzedSteps + stepAccumulated) * sumX2 - Math.pow(sumX, 2)) * 3600
+          theExperiment.addEvent('Average step doubling time is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (CI95, ' + round(stepDoublingTimeCI95 / stepDoublingTimeAvg * 100, 1) + '%) with ' + round(stepTrend, 2) + ' h/h trend (' + round(stepTrend / stepDoublingTimeAvg * 100, 1) + '%)')
+          // Growth stability test and parameters control
+          if ((Math.abs(stepTrend / stepDoublingTimeAvg) <= (UserDefinedProtocol.growthTrendMax / 100)) || stepAccumulated) {
             // TODO this solution removes stepTrend criteria check if at least once reached (expecting convergence!!!). May need to be upgraded later.
             theAccessory.context().put('stepAccumulated', stepAccumulated + 1)
-          if ((stabilizedTime <= experimentDuration) && ((stepDoublingTimeCI95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.CI95AmplitudeMax / 100))) {
-            theAccessory.context().put('modeStabilized', 1)
-            theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
-            theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
-            theAccessory.context().remove('stepAccumulated')
-            theAccessory.context().remove('stepCounter')
-            theAccessory.context().remove('expDuration')
-            theAccessory.context().remove('stepDoublingTime')
-            theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + '  ' + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (CI95)')
-            if (UserDefinedProtocol.particleSwarmOptimizer) {
-              PSO(stepDoublingTimeAvg)
-            } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
-              var positions = changeParameter(UserDefinedProtocol.controlledParameter)
-              debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]') 
-              theServer.sendMail('OPTIMIZER on ' + theGroup.getName() , 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
+            if ((stabilizedTime <= experimentDuration) && ((stepDoublingTimeCI95 / stepDoublingTimeAvg) <= (UserDefinedProtocol.CI95AmplitudeMax / 100))) {
+              theAccessory.context().put('modeStabilized', 1)
+              theAccessory.context().put('stabilizedTime', experimentDuration + UserDefinedProtocol.stabilizationTimeMin * 3600)
+              theAccessory.context().put('stabilizedTimeMax', experimentDuration + UserDefinedProtocol.stabilizationTimeMax * 3600)
+              theAccessory.context().remove('stepAccumulated')
+              theAccessory.context().remove('stepCounter')
+              theAccessory.context().remove('expDuration')
+              theAccessory.context().remove('stepDoublingTime')
+              theExperiment.addEvent('*** Stabilized doubling time Dt (' + theGroup.getAccessory('thermo.thermo-reg').getValue() + '  ' + String.fromCharCode(176) + 'C, ' + theAccessory.context().getString('controlledParameterText', 'no parameter') + ') is ' + round(stepDoublingTimeAvg, 2) + String.fromCharCode(177) + round(stepDoublingTimeCI95, 2) + ' h (CI95)')
+              if (UserDefinedProtocol.particleSwarmOptimizer) {
+                PSO(stepDoublingTimeAvg)
+              } else if (UserDefinedProtocol.controlledParameterSteps.length > 1) {
+                var positions = changeParameter(UserDefinedProtocol.controlledParameter)
+                debugLogger('OPTIMIZER executed with fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and new position is [ ' + positions[1].toFixed(2) + ' ]')
+                theServer.sendMail('OPTIMIZER on ' + theGroup.getName(), 'NONE', ': fitness ' + stepDoublingTimeAvg.toFixed(2) + ' for [ ' + positions[0].toFixed(2) + ' ] and set new position [ ' + positions[1].toFixed(2) + ' ]') // Email notification
+              }
             }
           }
-        }
         }
       }
     }
