@@ -23,10 +23,11 @@ var UserDefinedProtocol = {
  *
  * @script PI-Curves Measurement - Photosynthesis Efficiency Quantification
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
+ * @citeas  Červený, J., Šetlík, I., Trtílek, M., & Nedbal, L. (2009). Photobioreactor for cultivation and real-time, in-situ measurement of O2 and CO2 exchange rates, growth dynamics, and of chlorophyll fluorescence emission of photoautotrophic microorganisms. Engineering in Life Sciences, 9(3), 247–253. https://doi.org/10.1002/elsc.200800123
  * @copyright Jan Červený 2019(c)
  * @license MIT
- * @version 1.2.3
- * @modified 16.3.2019 (JaCe)
+ * @version 1.2.4
+ * @modified 16.6.2022 (JaCe)
  * @notes For proper function of the script following protocols have to be disabled: "Lights", "Bubble intr. valve" and "Stirrer"
  *
  * @param {number} oxygenMeasurementDuration [s] Duration of O2 evolution measurement
