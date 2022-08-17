@@ -45,8 +45,8 @@ var UserDefinedProtocol = {
  * @author CzechGlobe - Department of Adaptive Biotechnologies (JaCe)
  * @copyright Jan Červený 2020(c)
  * @license MIT
- * @version 3.5.3
- * @modified 26.1.2021 (JaCe)
+ * @version 3.5.5
+ * @modified 17.8.2022 (JaCe)
  *
  * @notes For proper functionality of the script "OD Regulator" protocol has to be disabled as well as chosen
  *        controlled accessory protocols (i.e. Lights, Thermoregulation, GMS, Stirrer).
@@ -262,8 +262,33 @@ function round (number, decimals) {
   // Rounding specific decimal point number
   return +(Math.round(number + 'e+' + decimals) + 'e-' + decimals)
 }
-function getRandomOnInterval(min, max) {
+function getRandomOnInterval (min, max) {
   return Math.random() * (max - min) + min;
+}
+function randomn () {
+  var a = 0, b = 0
+  while(a === 0) a = Math.random() //Converting [0,1) to (0,1)
+  while(b === 0) b = Math.random()
+  var num = Math.sqrt( -2.0 * Math.log(a)) * Math.cos( 2.0 * Math.PI * b )
+  num = num / 10.0 + 0.5 // Translate to 0 -> 1
+  if (num > 1 || num < 0) 
+    num = randomn() // resample between 0 and 1 if out of range
+  return num
+}
+function getNormalOnInterval (min, max, skew) {
+  var a = 0, b = 0
+  while(a === 0) a = Math.random() //Converting [0,1) to (0,1)
+  while(b === 0) b = Math.random()
+  var num = Math.sqrt( -2.0 * Math.log(a)) * Math.cos( 2.0 * Math.PI * b )
+  num = num / 10.0 + 0.5 // Translate to 0 -> 1
+  if (num > 1 || num < 0) 
+    num = getNormalOnInterval(min, max, skew) // resample between 0 and 1 if out of range
+  else{
+    num = Math.pow(num, skew) // Skew
+    num *= max - min // Stretch to fill range
+    num += min // offset to min
+  }
+  return num
 }
 function debugLogger (message, status) {
   if ((status === undefined) || (status === 1) || (status === 'on')) {
@@ -272,7 +297,7 @@ function debugLogger (message, status) {
     return null
   }
 }
-function getSumArrReduce(total, num) {
+function getSumArrReduce (total, num) {
   return total + num;
 }
 function controlParameter (parameter, values) {
